@@ -1,0 +1,25 @@
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Editor
+.vscode/
+.idea/
+*.iml
+
+# Docs build (nếu sau này dùng MkDocs/Docusaurus)
+site/
+build/
+.docusaurus/
+node_modules/
+
+# Temporary
+*.tmp
+*.bak
+*~
+
+# Local notes (cá nhân, không commit)
+NOTES.md
+TODO-local.md
