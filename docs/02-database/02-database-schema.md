@@ -4,6 +4,26 @@
 
 ---
 
+## 🗺️ Schema roadmap (READ FIRST)
+
+Doc này chứa **3 generations** schema, mỗi cái có status riêng:
+
+| Generation | Status | Sections | Notes |
+|---|---|---|---|
+| **v3.x current** | ✅ Production | 1 – 7 + 8 – 14 | Đang chạy production, mọi service đọc từ đây |
+| **v4.0 Global** | 📅 Planned v4.0 | 2.5, 7.5, 11.5 | Multi-currency + UTC + i18n + Sharding |
+| **v3.5+ Finance Ledger** | 🚨 DRAFT spec | **7.6** | Pattern 2 (control + subledger), dual-write planned v3.5, cutover v3.6 |
+
+**Adoption strategy cho Finance Ledger (section 7.6)**:
+1. **v3.4 NOW**: Section 7.6 là DRAFT spec, không deploy
+2. **v3.5 (6 weeks)**: Add new tables + build `PostJournal` Go function + dual-write shadow mode
+3. **v3.6 (4 weeks)**: Switch read path sang subledger view → drop legacy tables ở section 6 (partner_wallet_transactions etc.)
+4. **v3.7+**: Continue với Kafka, etc.
+
+Đọc chi tiết: [Doc 16 · Finance Ledger Spec](../09-finance/16-finance-ledger-spec.md) + [MIGRATION-PLAN-v4](../MIGRATION-PLAN-v4.md).
+
+---
+
 ## 1. ERD overview · Core domain
 
 ```text
@@ -552,6 +572,8 @@ CREATE TABLE agent_kyc_docs (
 
 ## 6. Partner domain (DB: `smp_partner`) — v3.3
 
+> ℹ️ **Migration note v3.5+**: Table `partner_wallet_transactions` sẽ bị **deprecated ở v3.6** khi cutover sang ledger (section 7.6). Subledger view trên `journal_lines` với `account=partner_wallet`, `owner_type=partner` thay thế. Tables `partner_invoices` và `partner_payouts` **giữ nguyên** vì là legal records riêng.
+
 ```sql
 CREATE DATABASE smp_partner CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE smp_partner;
@@ -924,6 +946,341 @@ func Translate(key, locale string) string {
     return "[" + key + "]"
 }
 ```
+
+---
+
+## 7.6 · v3.5+ Finance Ledger schema (DB: `smp_finance`) · DRAFT
+
+> **🚨 IMPORTANT · v3.5+ specification, NOT YET DEPLOYED**
+>
+> Section này document schema **Pattern 2 (control account + subledger dimension)** từ [Doc 16 · Finance Ledger Spec](../09-finance/16-finance-ledger-spec.md). Adoption strategy:
+> - **v3.4 (NOW)**: Schema cũ ở section 6 (`partner_wallet_transactions`, `partner_invoices`, `partner_payouts`) đang production
+> - **v3.5 (planned 6 weeks)**: Build new tables below + dual-write shadow mode
+> - **v3.6 (planned 4 weeks)**: Switch read path sang subledger view, drop old tables
+>
+> Schema này thay thế design 3-bảng-ví/điểm/earnings hiện tại bằng **single source of truth = `journal_lines`** với subledger filter.
+
+```sql
+CREATE DATABASE smp_finance CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE smp_finance;
+```
+
+### 7.6.1 · `accounts` · Chart of Accounts
+
+Control accounts — UNIQUE theo `(code, currency)`. **KHÔNG tạo 1 row per customer/agent** (đó là anti-pattern).
+
+```sql
+CREATE TABLE accounts (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  code VARCHAR(32) NOT NULL COMMENT 'cash_gateway, customer_wallet, agent_payable...',
+  currency CHAR(3) NOT NULL DEFAULT 'VND' COMMENT 'ISO 4217',
+  type VARCHAR(12) NOT NULL COMMENT 'ASSET|LIABILITY|REVENUE|EXPENSE|EQUITY',
+  normal_side CHAR(2) NOT NULL COMMENT 'Dr|Cr',
+  description VARCHAR(255),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at_utc DATETIME(6) NOT NULL DEFAULT (UTC_TIMESTAMP(6)),
+  UNIQUE KEY uniq_code_currency (code, currency),
+  CHECK (type IN ('ASSET','LIABILITY','REVENUE','EXPENSE','EQUITY')),
+  CHECK (normal_side IN ('Dr','Cr')),
+  CHECK (currency REGEXP '^[A-Z]{3}$')
+) ENGINE=InnoDB;
+
+-- Seed chuẩn theo Doc 16 §1
+INSERT INTO accounts (code, currency, type, normal_side, description) VALUES
+-- ASSETS (Dr normal)
+('cash_gateway',           'VND', 'ASSET',     'Dr', 'Clearing tiền cổng đã confirm, chưa về bank'),
+('cash_bank',              'VND', 'ASSET',     'Dr', 'Tiền thật trong ngân hàng SMP'),
+('agent_cod_receivable',   'VND', 'ASSET',     'Dr', 'Thợ giữ cash của SMP (COD thu, chưa remit)'),
+('agent_debt',             'VND', 'ASSET',     'Dr', 'Thợ nợ lại SMP (clawback / COD short)'),
+-- LIABILITIES (Cr normal)
+('customer_wallet',        'VND', 'LIABILITY', 'Cr', 'SMP nợ KH (subledger theo customer)'),
+('agent_payable',          'VND', 'LIABILITY', 'Cr', 'SMP nợ thợ - earnings (subledger theo agent)'),
+('partner_wallet',         'VND', 'LIABILITY', 'Cr', 'SMP nợ partner (prepaid)'),
+('cod_clearing',           'VND', 'LIABILITY', 'Cr', 'Suspense giữa COD_COLLECTED → SETTLED'),
+('refund_payable',         'VND', 'LIABILITY', 'Cr', 'Hoàn đã duyệt, chờ chi về nguồn gốc'),
+('loyalty_liability',      'VND', 'LIABILITY', 'Cr', 'Giá trị điểm đang lưu hành'),
+('service_guarantee_reserve','VND','LIABILITY','Cr', 'Quỹ bảo hành/đảm bảo dịch vụ (KHÔNG dùng "insurance")'),
+('vat_payable',            'VND', 'LIABILITY', 'Cr', 'VAT phải nộp (rate từ tax_configs)'),
+-- REVENUE (Cr normal)
+('revenue_commission',     'VND', 'REVENUE',   'Cr', 'Doanh thu commission SMP'),
+-- EXPENSES (Dr normal)
+('gateway_fee_expense',    'VND', 'EXPENSE',   'Dr', 'Phí cổng SMP gánh'),
+('marketing_expense',      'VND', 'EXPENSE',   'Dr', 'Chi phí điểm/referral'),
+('rounding_adjustment',    'VND', 'EXPENSE',   'Dr', 'Hấp thụ chênh làm tròn cross-entry');
+```
+
+### 7.6.2 · `journal_entries` · Header (append-only + hash chain)
+
+```sql
+CREATE TABLE journal_entries (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  ref_type VARCHAR(24) NOT NULL COMMENT 'settlement|refund|payout|topup|adjustment...',
+  ref_id VARCHAR(64) NOT NULL COMMENT 'ID của object reference',
+  idempotency_key VARCHAR(80) NOT NULL UNIQUE COMMENT 'producer-side dedup',
+  currency CHAR(3) NOT NULL DEFAULT 'VND' COMMENT '1 entry = 1 currency. FX riêng entry',
+  memo VARCHAR(255),
+  
+  -- Tamper resistance: hash chain
+  prev_hash CHAR(64) NULL COMMENT 'SHA-256 of previous entry row_hash',
+  row_hash  CHAR(64) NOT NULL COMMENT 'SHA-256(prev_hash || canonical_payload)',
+  
+  posted_by VARCHAR(64) NULL COMMENT 'user_id of admin manual posting, NULL nếu system',
+  created_at_utc DATETIME(6) NOT NULL DEFAULT (UTC_TIMESTAMP(6)),
+  
+  INDEX idx_je_ref (ref_type, ref_id),
+  INDEX idx_je_created (created_at_utc),
+  CHECK (currency REGEXP '^[A-Z]{3}$')
+) ENGINE=InnoDB;
+```
+
+**Append-only enforcement**: trigger BEFORE UPDATE/DELETE → REJECT:
+```sql
+CREATE TRIGGER trg_je_no_update BEFORE UPDATE ON journal_entries
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'journal_entries is append-only';
+CREATE TRIGGER trg_je_no_delete BEFORE DELETE ON journal_entries
+FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'journal_entries is append-only';
+```
+
+### 7.6.3 · `journal_lines` · Subledger dimension (Pattern 2)
+
+```sql
+CREATE TABLE journal_lines (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  entry_id BIGINT UNSIGNED NOT NULL,
+  account_id BIGINT UNSIGNED NOT NULL,
+  
+  -- SUBLEDGER DIMENSION: owner sống ở line, không đẻ account row
+  owner_type VARCHAR(12) NULL COMMENT 'customer|agent|partner|NULL(control account only)',
+  owner_id   BIGINT UNSIGNED NULL,
+  
+  -- Money (CHÍNH XÁC một bên Dr hoặc Cr, không cả 2)
+  debit_minor  BIGINT NOT NULL DEFAULT 0 COMMENT 'minor units',
+  credit_minor BIGINT NOT NULL DEFAULT 0,
+  
+  description VARCHAR(255),
+  
+  CONSTRAINT fk_jl_entry FOREIGN KEY (entry_id) REFERENCES journal_entries(id),
+  CONSTRAINT fk_jl_account FOREIGN KEY (account_id) REFERENCES accounts(id),
+  CONSTRAINT chk_nonneg   CHECK (debit_minor >= 0 AND credit_minor >= 0),
+  CONSTRAINT chk_one_side CHECK ((debit_minor > 0) <> (credit_minor > 0)),
+  
+  INDEX idx_jl_entry (entry_id),
+  INDEX idx_jl_account_owner (account_id, owner_type, owner_id) COMMENT 'subledger query',
+  INDEX idx_jl_owner (owner_type, owner_id) COMMENT 'all activity per owner'
+) ENGINE=InnoDB;
+```
+
+**Balance enforcement · 3 lớp (xem Doc 16 §2)**:
+
+1. **Single writer**: mọi posting đi qua hàm `PostJournal(entry, lines[])` trong Go (pkg/finance). Không INSERT thẳng từ service nào khác.
+
+2. **Deferred constraint trigger**: validate `Σdebit = Σcredit` per `entry_id` trước COMMIT.
+
+```sql
+DELIMITER //
+CREATE TRIGGER trg_jl_balanced_check
+AFTER INSERT ON journal_lines
+FOR EACH ROW
+BEGIN
+  DECLARE total_dr, total_cr BIGINT;
+  SELECT SUM(debit_minor), SUM(credit_minor)
+    INTO total_dr, total_cr
+    FROM journal_lines
+    WHERE entry_id = NEW.entry_id;
+  -- Note: kiểm tra final check sẽ chạy ở application layer (PostJournal)
+  -- trigger này log warning nếu detect imbalance trong batch insert
+  -- (final commit check ở app layer transaction)
+END //
+DELIMITER ;
+```
+
+3. **Daily reconcile job**: trial balance toàn hệ thống `SUM(all debit) = SUM(all credit)` + so subledger balance vs control.
+
+**Subledger view** (helpful view, không phải table):
+
+```sql
+CREATE VIEW v_subledger_balance AS
+SELECT
+  a.code AS account_code,
+  jl.owner_type,
+  jl.owner_id,
+  SUM(jl.debit_minor) - SUM(jl.credit_minor) AS balance_minor,
+  jl.entry_id  -- max(entry_id) cho latest activity
+FROM journal_lines jl
+JOIN accounts a ON a.id = jl.account_id
+GROUP BY a.code, jl.owner_type, jl.owner_id;
+
+-- Example query: customer X có ví bao nhiêu?
+-- SELECT -balance_minor AS wallet_balance  -- credit-normal → flip sign
+-- FROM v_subledger_balance
+-- WHERE account_code = 'customer_wallet' AND owner_type = 'customer' AND owner_id = 12345;
+```
+
+### 7.6.4 · `outbox` · Transactional outbox pattern
+
+```sql
+CREATE TABLE outbox (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  event_id CHAR(36) NOT NULL UNIQUE COMMENT 'UUID, idempotency key',
+  event_name VARCHAR(48) NOT NULL COMMENT 'SettlementSettled, CODCollected...',
+  event_version VARCHAR(8) NOT NULL DEFAULT '1.0',
+  
+  aggregate_type VARCHAR(24) NOT NULL COMMENT 'settlement, order, customer',
+  aggregate_id VARCHAR(64) NOT NULL,
+  ordering_key VARCHAR(64) NULL COMMENT 'preserve order per key (vd order_id)',
+  
+  payload JSON NOT NULL,
+  
+  status VARCHAR(12) NOT NULL DEFAULT 'pending' COMMENT 'pending|dispatched|failed',
+  attempts INT NOT NULL DEFAULT 0,
+  next_retry_at_utc DATETIME(6) NULL,
+  last_error TEXT NULL,
+  
+  created_at_utc DATETIME(6) NOT NULL DEFAULT (UTC_TIMESTAMP(6)),
+  dispatched_at_utc DATETIME(6) NULL,
+  
+  CHECK (status IN ('pending','dispatched','failed')),
+  INDEX idx_outbox_status_retry (status, next_retry_at_utc) COMMENT 'dispatcher polling',
+  INDEX idx_outbox_aggregate (aggregate_type, aggregate_id),
+  INDEX idx_outbox_created (created_at_utc)
+) ENGINE=InnoDB;
+```
+
+**Producer pattern**: ghi `outbox` row trong cùng transaction với business data:
+
+```sql
+START TRANSACTION;
+
+-- Business state change (vd settlement state SETTLED)
+UPDATE settlements SET state = 'SETTLED' WHERE id = ?;
+
+-- Journal entries (ledger)
+INSERT INTO journal_entries (...) VALUES (...);
+INSERT INTO journal_lines (...) VALUES (...), (...);
+
+-- Outbox event (cùng transaction → atomic guarantee)
+INSERT INTO outbox (event_id, event_name, aggregate_type, aggregate_id, ordering_key, payload)
+VALUES (UUID(), 'SettlementSettled', 'settlement', ?, ?, JSON_OBJECT(...));
+
+COMMIT;
+```
+
+**Dispatcher loop** (separate worker):
+```sql
+SELECT * FROM outbox
+WHERE status = 'pending' AND (next_retry_at_utc IS NULL OR next_retry_at_utc <= NOW())
+ORDER BY id
+LIMIT 100;
+-- → gọi consumer in-process → success: UPDATE status='dispatched'
+-- → fail: INCREMENT attempts, SET next_retry_at_utc với exponential backoff
+-- → > 5 attempts: INSERT vào dead_letters + UPDATE outbox status='failed'
+```
+
+Chi tiết: xem [Doc 18 · Event Catalog](../09-finance/18-event-catalog.md).
+
+### 7.6.5 · `dead_letters` · DLQ
+
+```sql
+CREATE TABLE dead_letters (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  event_id CHAR(36) NOT NULL COMMENT 'từ outbox.event_id',
+  consumer VARCHAR(32) NOT NULL COMMENT 'service name nào fail xử lý',
+  attempts INT NOT NULL,
+  error TEXT NOT NULL,
+  payload JSON NOT NULL,
+  
+  created_at_utc DATETIME(6) NOT NULL DEFAULT (UTC_TIMESTAMP(6)),
+  replayed_at_utc DATETIME(6) NULL COMMENT 'NULL = pending manual review',
+  replayed_by VARCHAR(64) NULL,
+  
+  INDEX idx_dl_event (event_id),
+  INDEX idx_dl_pending (replayed_at_utc) COMMENT 'find unresolved'
+) ENGINE=InnoDB;
+```
+
+Admin UI sẽ list `dead_letters WHERE replayed_at_utc IS NULL` cho manual review.
+
+### 7.6.6 · `tax_configs` REVISED · Use basis points (bps)
+
+> ⚠️ **Conflict với section 7.5.4 hiện tại**: section đó dùng `tax_rate DECIMAL(5,4)`. Doc 16 đề xuất dùng **basis points** (integer) để avoid float precision issues.
+>
+> **Migration**: v3.5 add column `rate_bps`, dual-write, v3.6 drop `tax_rate` DECIMAL column.
+
+```sql
+-- v3.5 ALTER (additive, backward compatible)
+ALTER TABLE tax_configs
+  ADD COLUMN rate_bps INT NULL COMMENT 'basis points: 800=8%, 1000=10%' AFTER tax_rate;
+
+-- Backfill from existing
+UPDATE tax_configs SET rate_bps = ROUND(tax_rate * 10000) WHERE rate_bps IS NULL;
+
+-- v3.6 ALTER (after verification)
+ALTER tax_configs MODIFY COLUMN rate_bps INT NOT NULL;
+-- Eventually DROP COLUMN tax_rate after grace period
+```
+
+**Final shape (v3.6+):**
+
+```sql
+CREATE TABLE tax_configs (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  country_code CHAR(2) NOT NULL,
+  category VARCHAR(50) NOT NULL DEFAULT 'default',
+  tax_name VARCHAR(50) NOT NULL COMMENT 'VAT|GST|Sales Tax|Service Tax',
+  rate_bps INT NOT NULL COMMENT '800=8%, 1000=10%, 900=9%',  -- NEW
+  jurisdiction VARCHAR(64) NULL,
+  effective_from DATE NOT NULL,
+  effective_to DATE NULL,
+  notes TEXT,
+  created_at_utc DATETIME(6) NOT NULL DEFAULT (UTC_TIMESTAMP(6)),
+  CONSTRAINT fk_tax_country FOREIGN KEY (country_code) REFERENCES countries(code),
+  UNIQUE KEY uniq_country_cat_juri_from (country_code, category, jurisdiction, effective_from),
+  INDEX idx_tax_lookup (country_code, category, effective_from),
+  CHECK (rate_bps >= 0 AND rate_bps <= 10000)
+) ENGINE=InnoDB;
+
+-- Seed
+INSERT INTO tax_configs (country_code, category, tax_name, rate_bps, effective_from) VALUES
+('VN', 'default', 'VAT', 1000, '2024-01-01'),
+('VN', 'service', 'VAT', 800,  '2024-07-01'),  -- VN giảm VAT 2%
+('VN', 'service', 'VAT', 1000, '2027-01-01'),  -- back to 10% sau khi hết giảm 2026
+('SG', 'default', 'GST', 900,  '2024-01-01'),
+('TH', 'default', 'VAT', 700,  '2024-01-01'),
+('CN', 'default', 'VAT', 600,  '2024-01-01');
+```
+
+### 7.6.7 · Migration path từ schema cũ
+
+Trong v3.5 (dual-write phase), schema **CŨ và MỚI cùng tồn tại**. Code mới ghi vào cả 2:
+
+| v3.4 cũ (production) | v3.5 mới (shadow) | v3.6 (cutover) |
+|---|---|---|
+| `partner_wallet_transactions` (in `smp_partner`) | journal_lines với `account=partner_wallet`, `owner_type=partner` | Drop old |
+| `partner_invoices` (giữ - đây là legal record) | (giữ — không thay thế) | (giữ) |
+| `partner_payouts` (giữ - đây là payment record) | (giữ — không thay thế) | (giữ) |
+| (chưa có points/loyalty) | journal_lines với `account=loyalty_liability` | (mới) |
+| (chưa có agent_earnings) | journal_lines với `account=agent_payable`, `owner_type=agent` | (mới) |
+
+**Daily reconcile job** (v3.5 phase):
+```python
+# Pseudo
+for partner in active_partners:
+    old_balance = sum(partner_wallet_transactions.amount where partner_id=partner.id)
+    new_balance = subledger_view(account='partner_wallet', owner_type='partner', owner_id=partner.id)
+    
+    if abs(old_balance - new_balance) > 1:  # 1 VND tolerance
+        alert_finance(f"Drift detected: partner {partner.id}")
+        log_to_reconcile_table(...)
+```
+
+Nếu chạy 30 ngày zero drift → confident cutover ở v3.6.
+
+### 7.6.8 · Operational notes
+
+- **Performance**: 1M orders × ~5 lines/order = 5M `journal_lines` rows/year. Index `idx_jl_account_owner` cover query subledger balance. Materialized balance table optional nếu cần (hourly refresh).
+- **Backup**: `journal_*` tables = critical financial data → daily backup + 10-year retention (theo NĐ 123/2020 + NĐ 70/2025).
+- **Audit trail**: hash chain ở `journal_entries.row_hash` cho tamper detection. Cron job verify hash chain integrity daily.
+- **DR**: cross-region backup encrypted (xem [Doc 11 INC-012](../07-devops/11-runbook-incidents.md) for cross-region replication).
 
 ---
 

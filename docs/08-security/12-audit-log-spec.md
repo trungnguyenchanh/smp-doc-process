@@ -483,16 +483,31 @@ This prevents abuse where someone queries audit history without trace.
 - No DELETE permission for app users
 - Only `audit_archiver` system user has DELETE (after archive)
 
-### 10.2 Hash chaining (Phase 2)
-Optional: each entry includes hash of previous entry → tamper detection.
+### 10.2 Hash chaining (v3.5+ REQUIRED · upgraded from optional)
+
+> 🔄 **Update từ Tech Lead review**: Hash chain **MUST** for compliance audit (PDPL Article 16). Consistent với `journal_entries` hash chain ở [Doc 02 section 7.6.2](../02-database/02-database-schema.md).
+
+Each audit entry includes hash of previous entry → tamper detection:
 
 ```javascript
 {
   audit_id: "aud_X",
-  prev_hash: "sha256:abc...",
-  current_hash: "sha256:def..."  // hash of (this entry + prev_hash)
+  prev_hash: "sha256:abc...",     // hash của entry trước
+  row_hash:  "sha256:def..."      // sha256(prev_hash || canonical_payload)
 }
 ```
+
+**Implementation**:
+- Canonical payload = JSON.stringify với keys sorted alphabetically (deterministic)
+- `prev_hash` của entry đầu tiên trong genesis batch = 64 chars `0`
+- Daily cron job verify chain integrity từ genesis → latest
+- Broken chain → SEV-1 incident · page Security + CTO immediately
+- Audit `audit.chain_verification_failed` event với details + diff
+
+**Reconcile schedule** (BR-RECON-006 trong Doc 15):
+- Daily 04:30 UTC: verify hash chain integrity
+- Output report: số entries verified, chain status (intact/broken at position N)
+- Retention: chain verification logs giữ permanent (cùng audit log)
 
 ### 10.3 Off-site backup
 - Daily snapshot to separate S3 bucket (different region + account)
@@ -509,10 +524,114 @@ Rules:
 - **DO mask**: in API responses to non-privileged viewers
 - **DO encrypt**: at-rest with MongoDB Encryption at Rest
 
-When customer requests data deletion (PDPA right to erasure):
+When customer requests data deletion (PDPL right to erasure):
 - DO NOT delete audit entries
 - DO anonymize PII fields: `actor_name` → "deleted_user_XXX"
 - Keep audit_id, action, timestamp (operational integrity)
+
+## 11.5 DSR (Data Subject Request) Lifecycle Events (v3.5+)
+
+> Theo [Doc 21 · PDPL Data Policy](./13-data-classification-encryption.md cross-link → 10-legal/21-pdpl-data-policy.md), KH/thợ có quyền truy cập, xóa, chỉnh sửa dữ liệu cá nhân. Mọi bước trong lifecycle MUST có audit trail.
+
+### 11.5.1 DSR event types
+
+| action | Trigger | Severity |
+|---|---|---|
+| `dsr.request_received` | User submit DSR via app / API / email | Info |
+| `dsr.identity_verified` | Identity check passed (OTP / KYC) | Info |
+| `dsr.access_export_started` | Backend bắt đầu generate ZIP export | Notice |
+| `dsr.access_export_delivered` | Export ZIP sent tới user (email link / app download) | Notice |
+| `dsr.deletion_marked` | User account marked `pending_deletion`, 30-day grace started | **Warning** |
+| `dsr.deletion_cancelled` | User cancel deletion trong 30 days | Notice |
+| `dsr.deletion_executed` | Grace expired → actual anonymization | **Critical** |
+| `dsr.correction_applied` | User corrected wrong PII data | Info |
+| `dsr.consent_withdrawn` | User rút consent cho specific purpose (marketing, etc.) | Notice |
+| `dsr.consent_granted` | User cấp lại consent | Info |
+| `dsr.objection_raised` | User phản đối xử lý cụ thể | **Warning** |
+| `dsr.legal_hold_applied` | Admin override deletion vì legal/compliance reason | **Critical** |
+
+### 11.5.2 Required fields cho DSR events
+
+```javascript
+{
+  "audit_id": "aud_01HX8K...",
+  "action": "dsr.access_export_started",
+  "category": "compliance",
+  "severity": "notice",
+  
+  // Subject (whose data)
+  "subject_type": "customer" | "agent" | "partner",
+  "subject_id": "cust_12345",
+  "subject_country": "VN",  // ← determines applicable law
+  
+  // Requestor (often same as subject, but admin can act on behalf)
+  "actor_type": "self" | "admin_proxy",
+  "actor_id": "cust_12345",
+  
+  // Request details
+  "request_id": "dsr_2026_05_28_001",
+  "request_type": "access" | "deletion" | "correction" | "consent_update" | "objection",
+  "request_channel": "app" | "api" | "email" | "phone" | "ops_form",
+  
+  // Lifecycle tracking
+  "sla_deadline_utc": "2026-06-04T03:00:00Z",  // 7 days for access per PDPL
+  "previous_step_audit_id": "aud_01HX8J...",   // chain DSR events together
+  
+  // Context
+  "purposes_affected": ["marketing", "analytics"],  // for consent_withdrawn
+  "fields_exported": ["name", "phone", "address"],  // for access_export
+  "records_count": 1247,                            // for export delivery
+  
+  // Compliance evidence
+  "legal_basis": "user_request_PDPL_article_17",
+  "legal_hold_reason": null,  // chỉ populated cho legal_hold_applied
+  
+  "occurred_at_utc": "2026-05-28T03:00:00Z",
+  "ip": "203.0.113.45",
+  "trace_id": "..."
+}
+```
+
+### 11.5.3 DSR SLA tracking
+
+Mỗi `dsr.request_received` MUST trigger SLA tracker:
+
+| Request type | SLA (PDPL VN) | Audit alert nếu vượt |
+|---|---|---|
+| Access (export) | 7 days | `dsr.sla_at_risk` warning at day 5, `dsr.sla_breach` critical at day 7 |
+| Deletion | 30 days (incl grace period) | `dsr.sla_breach` critical at day 30 |
+| Correction | 14 days | `dsr.sla_breach` at day 14 |
+| Consent withdrawal | Immediate (< 24h) | `dsr.sla_breach` at day 1 |
+| Objection | 14 days | `dsr.sla_breach` at day 14 |
+
+(Số ngày cụ thể chờ luật sư VN xác nhận theo NĐ 356/2025 — xem [Doc 21](../10-legal/21-pdpl-data-policy.md))
+
+### 11.5.4 DSR audit chain query
+
+Mỗi DSR có 1 `request_id` xuyên suốt lifecycle. Query API cần support:
+
+```http
+GET /audit/dsr/{request_id}/timeline
+```
+
+Returns toàn bộ events theo thứ tự chronological, dùng `previous_step_audit_id` để build chain.
+
+### 11.5.5 Legal hold mechanism
+
+Khi có legal hold (dispute mở, fraud investigation, court order...), DSR deletion sẽ **bị block** với audit:
+
+```json
+{
+  "action": "dsr.legal_hold_applied",
+  "severity": "critical",
+  "legal_hold_reason": "dispute_DSP-2026-001-pending_resolution",
+  "subject_id": "cust_12345",
+  "actor_id": "ops_admin_01",
+  "estimated_release_date": "2026-08-15"  // when hold can be lifted
+}
+```
+
+Khi legal hold lifted, ghi `dsr.legal_hold_released` + auto-trigger queued deletion (nếu user đã request deletion trước đó).
 
 ## 12. Alerting on suspicious patterns
 
@@ -526,20 +645,62 @@ Real-time alerts based on audit log:
 | Audit log query by non-security user | Security log |
 | Permission grant outside business hours | Security review |
 | Multiple sensitive PII views by 1 user | Security review |
+| **DSR deletion attempted while legal hold active** | **Page Compliance + Security immediately** |
+| **DSR SLA breach (per type)** | **Compliance dashboard + email DPO** |
+| **PII unmask > 50 records in 10 min by 1 user** | **Security review queue + Slack** |
+| **Cross-country PII access (PIPL/GDPR risk)** | **Block by default + Compliance review** |
 
 Implementation: stream audit_log to Kafka → flink/streaming processor → alert.
 
 ## 13. Compliance mapping
 
-### PDPA Việt Nam (Personal Data Protection Act)
-- Article 6 (consent record): audit_log captures consent timestamp + IP
-- Article 16 (right to information): customer can request audit log of their data access
-- Article 17 (right to erasure): anonymization + audit retention 7 years
-- Article 23 (security measures): audit log + tamper resistance is part of "appropriate measures"
+### PDPL Việt Nam (Luật 91/2025/QH15 + NĐ 356/2025 — hiệu lực 01/01/2026)
+
+| PDPL Article | Audit coverage |
+|---|---|
+| Article 3 (consent record) | `dsr.consent_granted` + `dsr.consent_withdrawn` với timestamp + IP + purposes |
+| Article 4 (data minimization) | Annual audit log review · count `pii.search` events per role · flag over-access |
+| Article 8 (right to access) | `dsr.request_received` (type=access) → SLA 7 days tracked qua `dsr.access_export_*` events |
+| Article 9 (right to correction) | `dsr.correction_applied` |
+| Article 10 (right to erasure) | `dsr.deletion_marked` → 30-day grace → `dsr.deletion_executed` |
+| Article 11 (right to objection) | `dsr.objection_raised` + actions taken |
+| Article 16 (security measures) | Audit log itself + tamper resistance (section 10) is part of "appropriate measures" |
+| Article 22 (cross-border transfer) | `pii.access.cross_country` audit + CAC assessment record (China-specific) |
+
+Chế tài: **tới 5% doanh thu năm trước** cho vi phạm cross-border transfer (PDPL). Audit log MUST capture mọi cross-border PII access.
+
+### Sensitive PII categories (PDPL + NĐ 356)
+
+Per NĐ 356, các categories sau cần extra audit attention:
+
+| Category | Examples in SMP | Extra audit requirement |
+|---|---|---|
+| **Sinh trắc học** | Face ID, fingerprint (nếu dùng) | Mỗi lần access cần consent re-confirmation event |
+| **Sức khỏe** | (chưa applicable cho SMP) | N/A |
+| **Vị trí** | GPS live tracking SOS/share-trip | Audit per session, không log per ping |
+| **Tài chính** | Bank account, transaction history | High severity audit cho mọi unmask |
+| **Liên kết tổ chức** | (nếu thợ thuộc partner) | Standard audit |
 
 ### Tax & Accounting (VN)
-- Decree 119/2018: financial transactions retain 10 years
-- All `finance.*` audit entries retained 10 years (override 7-year default)
+
+- **NĐ 123/2020/NĐ-CP** + **NĐ 70/2025/NĐ-CP** (hiệu lực 01/06/2025): financial transactions retain **10 years**
+- **Thông tư 32/2025/TT-BTC**: e-invoice retention 10 years
+- **Chế tài NĐ 310/2025**: tới 200M VND cho vi phạm hóa đơn
+- All `financial.*` audit entries retained **10 years** (override 7-year default)
+
+### Multi-jurisdiction posture (v4.0)
+
+Khi expand sang country khác, audit log structure giữ nguyên nhưng compliance mapping cần extend:
+
+| Country | Primary law | DSR SLA | Cross-border |
+|---|---|---|---|
+| 🇻🇳 VN | PDPL 91/2025 | 7d access, 30d deletion | Default — same region |
+| 🇨🇳 CN | PIPL | Vary by request type | **Mandatory CAC assessment** |
+| 🇪🇺 EU | GDPR | 30d default, 90d extension | SCC required cho non-EU transfer |
+| 🇺🇸 US | CPRA (CA), state-by-state | 45 days | Notice-based |
+| 🇸🇬 SG | PDPA SG | 30 days | Approved jurisdictions only |
+
+Xem [Doc 13 · Multi-jurisdiction compliance](./13-data-classification-encryption.md) cho deployment implications.
 
 ## 14. Self-monitoring
 

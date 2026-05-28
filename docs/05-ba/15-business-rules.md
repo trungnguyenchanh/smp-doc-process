@@ -313,7 +313,9 @@ Khi tạo đơn `partner_customer`:
 |---|---|---|
 | `pending` | None | View pool, can't accept |
 | `basic` | CCCD front+back, portrait selfie, bank statement | Accept orders, max value 5M đ/đơn |
-| `full` | basic + skill certificate + insurance | All orders, no value cap |
+| `full` | basic + skill certificate + insurance (xem note) | All orders, no value cap |
+
+> **Note · terminology**: "insurance" ở đây là **bảo hiểm cá nhân của thợ** (bảo hiểm tai nạn lao động / trách nhiệm dân sự cá nhân), thợ tự mua hoặc partner cung cấp. KHÔNG nhầm với `service_guarantee_reserve` (quỹ nội bộ SMP — xem [Doc 16 · Finance Ledger Spec](../09-finance/16-finance-ledger-spec.md) + [Doc 19 · Service Guarantee Policy](../10-legal/19-service-guarantee-policy.md)).
 
 ### BR-KYC-002 · KYC progression
 - Agent đăng ký → pending
@@ -608,7 +610,155 @@ Auto-suspend partner nếu:
 
 ---
 
-## L · Reconciliation & Fraud Detection Rules (v4.0)
+## L · Warranty / Service Guarantee Rules (v3.5+ DRAFT)
+
+> Rules cho chính sách bảo hành theo [Doc 19 · Service Guarantee Policy](../10-legal/19-service-guarantee-policy.md). Quỹ accounting xem [Doc 16 · Finance Ledger Spec](../09-finance/16-finance-ledger-spec.md).
+
+### BR-WARRANTY-001 · Warranty certificate auto-issuance
+- **Trigger**: Order state transition → `completed`
+- **Action**:
+  - Compute `warranty_until = completed_at_utc + warranty_days` (lookup từ catalog)
+  - Emit event `WarrantyIssued` (xem [Doc 18](../09-finance/18-event-catalog.md))
+  - Notification gửi cho KH (in-app + push)
+- **Exception**: Nếu `service.warranty_days = 0` (vd survey-only), không issue certificate
+
+### BR-WARRANTY-002 · Warranty validity check
+- **Khi nào**: KH mở yêu cầu bảo hành
+- **Check**:
+  - `now_utc < warranty_until`? → continue
+  - Lỗi có thuộc list được bảo hành (tay nghề/linh kiện)? → continue
+  - Không thuộc list loại trừ (Doc 19 section 3)? → continue
+- **Action nếu PASS**: Tạo re-service order với `parent_order_id` link, no charge customer
+- **Action nếu FAIL**: Trả lỗi với reason cụ thể (expired / excluded category / external damage)
+
+### BR-WARRANTY-003 · Re-service SLA
+- **SLA target**: 48h từ khi yêu cầu mở
+- **Priority assignment**: Ưu tiên thợ gốc (`original_agent_id` từ parent order); nếu thợ off > 24h → dispatch thợ khác cùng skill
+- **Escalation**: Nếu > 48h chưa assigned → page Ops Manager
+
+### BR-WARRANTY-004 · Cost allocation cho re-service
+- **Lỗi tay nghề thợ gốc (default)**: Trừ earnings của `original_agent_id`. KPI strike count +1.
+- **Thợ gốc đã nghỉ việc**: Chi phí từ `service_guarantee_reserve` account
+- **Lỗi linh kiện (vendor fault)**: Trừ commission/recover từ supplier (case-by-case)
+- **Lỗi material customer cung cấp**: KH gánh chi phí (loại trừ bảo hành, refund không áp dụng)
+
+### BR-WARRANTY-005 · Service guarantee reserve funding
+- **Schedule**: Daily aggregated, ghi vào ledger trên mỗi `settlement` SETTLED
+- **Rate**: `X%` của `revenue_commission` (X chốt sau pilot 300-500 đơn — xem Doc 19 section 6)
+- **Journal**: `Dr revenue_commission R | Cr service_guarantee_reserve R`
+- **Cap**: Có trần chi per claim (chốt sau pilot)
+- **Reporting**: Monthly report Finance + Ops
+
+---
+
+## M · COD (Cash On Delivery) Rules (v3.5+ DRAFT)
+
+> Rules cho thanh toán tiền mặt theo [Doc 20 · COD Payment Policy](../10-legal/20-cod-payment-policy.md). Settlement state machine: [Doc 17](../09-finance/17-payment-settlement-lifecycle.md).
+
+### BR-COD-001 · COD eligibility (customer + order)
+- **Order value cap**: ≤ 500,000 VND (khởi điểm pilot; nới theo data)
+- **Customer history**: Phải hoàn thành ≥ 2 đơn trước, no-show rate < 10%
+- **Service category**: Whitelist các category low-risk (vd cleaning, simple maintenance)
+- **Action nếu FAIL**: Chỉ hiện gateway/wallet options, hide COD button
+
+### BR-COD-002 · COD eligibility (agent)
+- **KYC level**: ≥ `advanced` (CCCD + bank statement + 3+ months active)
+- **Rating**: ≥ 4.0 average over last 30 days
+- **Recent COD performance**: Remit on-time rate ≥ 95% in last 30 days
+- **Whitelist explicit**: Ops Admin có quyền add/remove manually
+- **Action nếu FAIL**: Agent không thấy đơn COD trong pool
+
+### BR-COD-003 · COD remit SLA
+- **Default**: Cuối ngày làm việc hôm thu, latest T+1 09:00 (giờ VN)
+- **Mechanism**: Agent tap "Remit" trong app → bank transfer (QR code) → confirm receipt
+- **Reconcile**: Daily 02:00 UTC check `agent_cod_receivable` aging
+- **Violation**: > T+1 09:00 → freeze toàn bộ payout của agent + alert Ops
+
+### BR-COD-004 · COD shortfall handling
+- **Trigger**: Agent remit < `agent_cod_receivable` (thiếu `var` VND)
+- **Action**:
+  - Ghi `Dr agent_debt var | Cr agent_cod_receivable var` (Doc 16 §3.4)
+  - Block payout đến khi `agent_debt = 0`
+  - Notify agent với reason + amount due
+- **Pattern detection**: Nếu shortfall ≥ 3 lần trong tháng → review + tạm đình chỉ COD
+
+### BR-COD-005 · COD refund before remit
+- **Scenario**: KH dispute đơn COD đã collected nhưng agent chưa remit
+- **Action accounting** (Doc 16 §3.4):
+  - `Dr cod_clearing P | Cr customer_wallet P` (refund về ví KH)
+  - `agent_cod_receivable` **không thay đổi** → agent vẫn nợ SMP
+  - Khi agent remit: `Dr cash_bank P | Cr agent_cod_receivable P` (SMP thu hồi cash đã ứng refund)
+- **Risk control**: Trigger này có exposure (SMP credit ví trước khi cầm cash). Mitigate bằng COD cap (BR-COD-001) + agent whitelist (BR-COD-002).
+
+### BR-COD-006 · AML threshold cho COD
+- **Threshold (VN)**: Single COD txn ≥ 300,000,000 VND
+- **Action**: Block + report to State Bank Vietnam (SBV) per Decree 03/2022/NĐ-CP
+- **Note**: COD cap 500,000 VND ở BR-COD-001 đã ngăn 99.99% nhưng rule này là safety net
+
+---
+
+## N · Loyalty Rules (v3.5+ DRAFT)
+
+> Rules cho hệ thống điểm/loyalty. Accounting: [Doc 16 · Finance Ledger Spec](../09-finance/16-finance-ledger-spec.md) section 3.2.
+
+### BR-LOYAL-001 · Earn points · pending state
+- **Trigger**: Settlement → `SETTLED` event (xem [Doc 18](../09-finance/18-event-catalog.md))
+- **Computation**: `points = floor(P × loyalty_rate)` where `loyalty_rate` từ rules engine (default 1 point per 1000 VND)
+- **State**: `pending` cho `refund_window_until` (default 7 ngày sau SETTLED)
+- **Journal**: Chưa ghi ledger trong `pending` state — chỉ ghi khi confirmed (BR-LOYAL-002)
+- **UX**: Hiện trong app với label "Đang xác nhận · còn N ngày"
+
+### BR-LOYAL-002 · Confirm points · sau refund window
+- **Trigger**: Cron daily check `now_utc > refund_window_until` + no active refund
+- **Action**:
+  - Status `pending` → `confirmed`
+  - Journal: `Dr marketing_expense L | Cr loyalty_liability L`
+- **UX**: Notification "Bạn đã nhận N điểm"
+
+### BR-LOYAL-003 · Clawback / cancel pending points trên refund
+- **Trigger**: `RefundSettled` event (xem [Doc 18](../09-finance/18-event-catalog.md))
+- **If points status = `pending`**:
+  - Cancel pending (no journal — chưa ghi gì)
+- **If points status = `confirmed`** (full refund):
+  - Reverse journal: `Dr loyalty_liability L | Cr marketing_expense L`
+  - Trừ points balance của customer
+  - Notification "Điểm đã bị thu hồi do hoàn đơn"
+- **If partial refund**: Pro-rata clawback theo tỷ lệ refunded/original
+
+---
+
+## O · Complaint & Dispute Rules (v3.5+ DRAFT)
+
+> Rules cho complaint handling + payout hold logic. Event: [Doc 18 · ComplaintOpened](../09-finance/18-event-catalog.md).
+
+### BR-CMPL-001 · Complaint window
+- **Window**: 7 ngày từ `order.completed` cho complaint thông thường
+- **Extended**: 30 ngày cho service category có warranty (use warranty path BR-WARRANTY-002 thay vì complaint)
+- **Beyond window**: Customer service review case-by-case, no auto-process
+
+### BR-CMPL-002 · Complaint categories
+- `service_quality` — Dịch vụ không đạt
+- `no_show` — Thợ không tới
+- `overcharge` — Tính tiền sai
+- `damage` — Hư tài sản KH
+- `duplicate` — Thanh toán 2 lần
+- `fraud` — Nghi ngờ gian lận
+- `goodwill` — Thiện chí khác
+
+### BR-CMPL-003 · Payout hold on complaint
+- **Trigger**: `ComplaintOpened` event với non-trivial category (exclude `goodwill`)
+- **Action**:
+  - Set `agent_payable[order_id]` status = `on_hold`
+  - Payout cron skip these orders
+  - Notify Ops queue cho resolution
+- **Resolution**:
+  - Complaint resolved in favor of agent → unhold, payout resumes
+  - Complaint resolved in favor of customer → refund flow triggers (BR-PAY-REF-*)
+- **SLA**: Resolution target ≤ 48h. Beyond → escalate to Ops Manager.
+
+---
+
+## P · Reconciliation & Fraud Detection Rules (v4.0)
 
 > Bộ rules cho automated reconciliation (đối soát) và fraud detection. Daily jobs check inconsistency + flag suspicious patterns.
 

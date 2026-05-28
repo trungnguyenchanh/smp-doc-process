@@ -129,6 +129,14 @@ nav:
       - Auth Spec: 08-security/08-auth-spec.md
       - Audit Log: 08-security/12-audit-log-spec.md
       - Data Classification: 08-security/13-data-classification-encryption.md
+  - 💰 Finance (v3.5+ spec):
+      - Finance Ledger Spec: 09-finance/16-finance-ledger-spec.md
+      - Payment & Settlement Lifecycle: 09-finance/17-payment-settlement-lifecycle.md
+      - Event Catalog: 09-finance/18-event-catalog.md
+  - 📜 Legal & Compliance (DRAFT):
+      - Service Guarantee Policy: 10-legal/19-service-guarantee-policy.md
+      - COD Payment Policy: 10-legal/20-cod-payment-policy.md
+      - PDPL Data Policy: 10-legal/21-pdpl-data-policy.md
 
 # Extra
 extra:

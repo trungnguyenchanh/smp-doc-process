@@ -233,8 +233,17 @@ func (m Money) Add(other Money) (Money, error) {
 func (m Money) Sub(other Money) (Money, error) { /* tương tự */ }
 
 // Multiply with rate (cho surge, VAT, discount %)
+// ⚠️ WARNING: float64 mất precision khi rate có decimal nhiều.
+// CHỈ DÙNG cho display approximation. Khi cần exact (tính VAT, commission, refund),
+// dùng MulBps() với basis points (1 bps = 0.01%) hoặc SplitBreakdown() — xem section 1.15.1.
 func (m Money) MulRate(rate float64) Money {
     return Money{Amount: int64(float64(m.Amount) * rate), Currency: m.Currency}
+}
+
+// MulBps: nhân với basis points (integer-safe). 1000 bps = 10%, 800 bps = 8%
+// Recommended cho mọi tính toán money exact.
+func (m Money) MulBps(bps int) Money {
+    return Money{Amount: m.Amount * int64(bps) / 10000, Currency: m.Currency}
 }
 
 // Format cho display theo locale
@@ -416,6 +425,254 @@ linters:
 ```
 
 Add custom linter `pkg/lint/no_currency_string.go` để catch các pattern phức tạp hơn.
+
+### 1.15.1 Rounding rule for breakdown · `SplitBreakdown` (v3.5+)
+
+> Critical pattern khi chia 1 số tiền P thành nhiều phần (commission C, VAT V, agent net N). Naive `round(C)` + `round(V)` + `round(N)` riêng có thể lệch 1 đồng → entry **không cân** trong double-entry bookkeeping. Xem [Doc 16 · Finance Ledger section 4](../09-finance/16-finance-ledger-spec.md) cho full context.
+
+#### Problem statement
+
+Cho `P = 99,999` VND. Cần tính:
+- VAT (8%) — đọc rate từ `tax_config`
+- Commission SMP (15% trên base = P − V)
+- Agent net N = P − C − V
+
+Naive approach (SAI):
+```go
+// ❌ AVOID
+v := P.MulBps(800)           // VAT 8% → 7,999.92 → round → 7,999 hoặc 8,000?
+base := P.Sub(v)              // base = 92,000 hoặc 92,001
+c := base.MulBps(1500)        // commission 15% → 13,800.15 → round
+n := P.Sub(c).Sub(v)          // residual
+// → Σ có thể = 99,998 hoặc 100,000 ≠ P → entry KHÔNG cân
+```
+
+#### Solution · Rule N = P − C − V (residual)
+
+**Quy tắc**:
+1. Tính `V` (VAT) trước, làm tròn về integer minor units.
+2. Tính `C` (commission) trên base (P − V), làm tròn về integer minor units.
+3. **`N` = P − V − C** (residual) — N hấp thụ toàn bộ phần dư → `V + C + N = P` luôn tuyệt đối đúng.
+
+```go
+// pkg/money/breakdown.go
+package money
+
+// SplitBreakdown chia P thành 3 phần (agent_net, commission, vat) sao cho
+// agent_net + commission + vat = P (no rounding drift).
+// vatBps: VAT rate basis points (800 = 8%, 1000 = 10%)
+// commBps: commission rate basis points trên base (P - VAT)
+//
+// Reference: Doc 16 section 4 (Rounding rule)
+func SplitBreakdown(p Money, vatBps, commBps int) (agentNet, commission, vat Money) {
+    // Step 1: VAT first (rounded down via integer division)
+    vat = Money{
+        Amount:   p.Amount * int64(vatBps) / 10000,
+        Currency: p.Currency,
+    }
+    
+    // Step 2: Commission on base = P - VAT
+    base := p.Amount - vat.Amount
+    commission = Money{
+        Amount:   base * int64(commBps) / 10000,
+        Currency: p.Currency,
+    }
+    
+    // Step 3: Agent net = residual (N = P - C - V)
+    // Hấp thụ mọi phần dư → tổng luôn = P
+    agentNet = Money{
+        Amount:   p.Amount - commission.Amount - vat.Amount,
+        Currency: p.Currency,
+    }
+    
+    return agentNet, commission, vat
+}
+```
+
+#### Example walkthrough
+
+```go
+P := money.VND(99999)
+n, c, v := money.SplitBreakdown(P, 800, 1500)  // VAT 8%, commission 15%
+
+// V = 99999 × 800 / 10000 = 7,999
+// base = 99999 - 7999 = 92,000
+// C = 92000 × 1500 / 10000 = 13,800
+// N = 99999 - 13800 - 7999 = 78,200  ← residual (no drift)
+
+// Verify entry cân:
+// 78,200 (agent_payable) + 13,800 (revenue_commission) + 7,999 (vat_payable) = 99,999 ✓
+```
+
+#### Cross-entry rounding (rare)
+
+Nếu phân bổ nhiều orders trong 1 batch (vd settlement nhiều đơn cùng partner), chênh dồn cuối batch → ghi vào account `rounding_adjustment` (xem [Doc 16 Chart of Accounts](../09-finance/16-finance-ledger-spec.md)). Alert nếu chênh > ngưỡng (suggested: > 100 VND/batch).
+
+#### Test cases bắt buộc
+
+```go
+// pkg/money/breakdown_test.go
+func TestSplitBreakdown_NoDrift(t *testing.T) {
+    cases := []struct {
+        name string
+        p    int64
+        vatBps, commBps int
+    }{
+        {"perfect division", 100000, 1000, 1500},
+        {"with drift", 99999, 800, 1500},      // ← edge case
+        {"prime number", 99991, 800, 1500},     // ← worst case
+        {"small amount", 1000, 800, 1500},
+        {"large amount", 99999999999, 800, 1500},
+    }
+    
+    for _, tc := range cases {
+        t.Run(tc.name, func(t *testing.T) {
+            p := money.VND(tc.p)
+            n, c, v := money.SplitBreakdown(p, tc.vatBps, tc.commBps)
+            
+            // Invariant: N + C + V = P luôn đúng
+            sum := n.Amount + c.Amount + v.Amount
+            require.Equal(t, tc.p, sum, "rounding drift detected")
+        })
+    }
+}
+```
+
+### 1.15.2 VAT rate · đọc từ `tax_config`, không hardcode
+
+> v3.4 hiện tại có `tax_configs` table (Doc 02 section 7.5.4). v3.5+ MUST đọc VAT rate runtime, không hardcode 10%.
+
+#### Why
+
+VAT VN hiện đang **8% (giảm tạm)** cho hàng/dịch vụ đủ điều kiện theo **VAT Law 48/2024/QH15**, có hiệu lực đến **31/12/2026**. Sau ngày này có thể trở lại 10%, hoặc gia hạn → policy thay đổi mà không cần redeploy code.
+
+Đồng thời multi-country: VN=VAT, SG=GST 9%, US=Sales Tax theo state. Hardcode `0.10` chỉ work cho VN.
+
+#### Pattern · Cache + fallback
+
+```go
+// pkg/finance/tax.go
+package finance
+
+import (
+    "context"
+    "time"
+)
+
+type TaxConfig struct {
+    Country       string  // ISO 3166-1 alpha-2: "VN", "SG"
+    Category      string  // "default", "service", "material"
+    TaxType       string  // "VAT", "GST", "Sales Tax"
+    RateBps       int     // 800 = 8%, 1000 = 10%, 900 = 9%
+    EffectiveFrom time.Time
+    EffectiveTo   *time.Time  // nullable
+}
+
+type TaxResolver struct {
+    repo  TaxConfigRepository
+    cache *ttlCache  // refresh every 5 min, fallback to last-known
+}
+
+// Resolve lấy VAT rate cho 1 transaction.
+// Lookup theo (country, category, transaction_date).
+// Fallback nếu DB down: dùng last-cached value + log warning.
+func (r *TaxResolver) Resolve(ctx context.Context, country, category string, txnDate time.Time) (int, error) {
+    key := taxCacheKey(country, category, txnDate)
+    if cached, ok := r.cache.Get(key); ok {
+        return cached.RateBps, nil
+    }
+    
+    cfg, err := r.repo.FindActive(ctx, country, category, txnDate)
+    if err != nil {
+        // Fallback: last known cached value (degraded mode)
+        if last, ok := r.cache.GetStale(key); ok {
+            r.log.Warn("tax_config DB lookup failed, using stale cache",
+                zap.String("country", country),
+                zap.Int("stale_rate_bps", last.RateBps),
+                zap.Error(err))
+            return last.RateBps, nil
+        }
+        return 0, fmt.Errorf("tax_config not found: %w", err)
+    }
+    
+    r.cache.Set(key, cfg, 5*time.Minute)
+    return cfg.RateBps, nil
+}
+```
+
+#### Usage trong finance-svc
+
+```go
+// finance-svc/internal/settlement/calculate.go
+func (s *SettlementService) CalculateBreakdown(ctx context.Context, order Order) (Breakdown, error) {
+    // Lookup VAT rate theo country của order + ngày
+    vatBps, err := s.taxResolver.Resolve(ctx, 
+        order.CountryCode,         // "VN"
+        "service",                  // category
+        order.CompletedAt,         // ngày completed → áp đúng rate hiệu lực
+    )
+    if err != nil {
+        return Breakdown{}, fmt.Errorf("vat lookup: %w", err)
+    }
+    
+    // Commission rate đọc từ rules_engine.yaml (xem section 1.16)
+    commBps := s.rulesEngine.Get("pricing", ctx).GetInt("commission_bps", 1500)
+    
+    // Apply rounding rule
+    n, c, v := money.SplitBreakdown(order.Total, vatBps, commBps)
+    
+    return Breakdown{
+        AgentNet:   n,
+        Commission: c,
+        VAT:        v,
+        VATRateBps: vatBps,  // snapshot vào order để audit
+    }, nil
+}
+```
+
+#### Audit snapshot
+
+Order/settlement record phải lưu **snapshot** `vat_rate_bps` tại thời điểm tạo entry, KHÔNG re-compute từ tax_config (vì rate có thể đổi). Reason: 1 đơn completed 30/11/2026 với VAT 8% phải giữ 8% mãi mãi, dù sau đó policy đổi sang 10%.
+
+```sql
+-- Trong settlement table
+vat_rate_bps INT NOT NULL  -- snapshot, immutable after create
+```
+
+#### Forbidden pattern
+
+```go
+// ❌ AVOID
+const VAT_VN = 0.10
+vat := order.Total.MulRate(VAT_VN)
+
+// ❌ AVOID
+const VAT_BPS = 1000
+vat := order.Total.MulBps(VAT_BPS)
+
+// ❌ AVOID — magic number trong tính toán
+vat := money.VND(order.Total.Amount * 8 / 100)
+
+// ✅ PREFER
+vatBps, _ := taxResolver.Resolve(ctx, "VN", "service", order.CompletedAt)
+n, c, v := money.SplitBreakdown(order.Total, vatBps, commBps)
+```
+
+#### Linter rules update
+
+Add vào `.golangci.yml`:
+
+```yaml
+linters-settings:
+  forbidigo:
+    forbid:
+      - p: '0\.[0-9]+\s*\*.*(?:vat|tax|commission)'
+        msg: "Don't hardcode tax/VAT/commission rates. Use tax_config / rules_engine."
+      - p: 'const\s+VAT'
+        msg: "VAT rate must be runtime config, not const."
+```
+
+---
 
 ### 1.16 v4.0 pattern · Rules Engine (`pkg/rules`)
 

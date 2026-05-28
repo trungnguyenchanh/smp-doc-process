@@ -480,22 +480,84 @@ Khi user country VN truy cập customer country US, áp dụng US masking profil
 
 ### 6.4 Deletion / Anonymization
 
-User-requested deletion (PDPA):
+User-requested deletion (PDPL Article 10):
 1. Verify user identity (re-auth, fresh token)
 2. Mark account `deletion_pending` (30-day grace period for rollback)
-3. After 30 days, automated process:
+3. Audit log: `dsr.deletion_marked` (see [Doc 12 section 11.5](./12-audit-log-spec.md#115-dsr-data-subject-request-lifecycle-events-v35))
+4. After 30 days, automated process:
    - PII fields → anonymized (vd `Nguyễn Văn A` → `deleted_user_<uuid>`)
    - Order history retained (anonymized customer_id)
-   - Audit logs retained (PII anonymized in actor_name)
+   - Audit logs retained (PII anonymized in actor_name, audit_id preserved)
    - Photos: customer-uploaded deleted, agent-uploaded retained anonymized
    - Bank accounts deleted
-4. Audit log: account.deletion.completed
-5. Notify user via email if reachable
+5. Audit log: `dsr.deletion_executed`
+6. Notify user via email if reachable
 
-System-driven retention expiry:
-- Order data > 5 years → archive to cold storage, then delete after legal review
+**Legal hold override**: nếu user có active dispute / fraud investigation / legal hold → deletion **blocked**. Audit: `dsr.legal_hold_applied`. Re-evaluate khi hold released.
+
+### 6.5 Retention table per data class (PDPL VN aligned)
+
+> Per [Doc 21 · PDPL Data Policy](../10-legal/21-pdpl-data-policy.md) + viện dẫn luật cụ thể.
+
+| Data class | Default retention | Legal basis | Override / Exception |
+|---|---|---|---|
+| **L0 - Public** (catalog, categories) | Indefinite | Operational need | None |
+| **L1 - Internal** (analytics, metrics) | 2 years | Business analysis | None |
+| **L2 - Confidential** (basic profile, addresses) | Account lifetime + 1 year | Service delivery | Legal hold |
+| **L3 - Sensitive PII** (phone, email, CCCD) | Account lifetime | PDPL Article 4 (minimization) | Legal hold / dispute |
+| **L4 - Highly sensitive** (bank, biometric, GPS live) | Use-case specific (see below) | PDPL Article 16 + minimization | Legal hold |
+| **Audit log (financial)** | **10 years** | NĐ 123/2020 + NĐ 70/2025 | None (immutable) |
+| **Audit log (general)** | 7 years | PDPL Article 16 evidence | None (immutable) |
+| **E-invoice records** | **10 years** | NĐ 70/2025 + Thông tư 32/2025 | None |
+| **Order data (incl. ledger)** | 10 years (tax) | Luật Kế toán + NĐ 123/2020 | None |
+| **KYC documents (CCCD, bank statement)** | Account lifetime + 5 years | Anti-money laundering + business | Legal hold |
+| **Chat messages KH↔thợ** | 12 months | Operational need + dispute window | Active dispute |
+| **Call recording (if consented)** | 90 days | Data minimization | Active dispute |
+| **GPS live tracking (SOS/share-trip)** | Session lifetime only | Minimization principle | SOS incident extended |
+| **GPS incident snapshots** | Until resolution + 1 year | Legal evidence | Legal hold |
+| **Marketing analytics (anonymized)** | 5 years | Legitimate interest | None |
+| **Failed login logs** | 90 days | Security monitoring | Active investigation |
+| **Photos (customer-uploaded)** | Account lifetime | Service evidence | Active dispute |
+| **Photos (agent QC/before-after)** | 2 years | Quality + warranty evidence | Active warranty |
+
+### 6.6 Legal hold mechanism
+
+Khi event sau xảy ra, data **không bị xóa** dù hết hạn retention default:
+
+| Trigger | Override | Audit |
+|---|---|---|
+| Active dispute / complaint mở | Hold đến resolution + 1 year | `dsr.legal_hold_applied` |
+| Fraud investigation active | Hold đến khi điều tra closed | `dsr.legal_hold_applied` |
+| SOS incident chưa resolved | Hold đến resolution + 1 year | `dsr.legal_hold_applied` |
+| Court order / regulatory request | Hold theo time frame specified | `dsr.legal_hold_applied` |
+| Tax authority audit | Hold đến audit closed | `dsr.legal_hold_applied` |
+
+Implementation: column `legal_hold_until DATETIME` trên các tables critical. Retention cron job check `legal_hold_until IS NULL OR legal_hold_until < NOW()` trước khi xóa.
+
+### 6.7 System-driven retention expiry
+
+Cron job `retention-enforcer` chạy daily 03:00 UTC:
+
+```text
+For each table với retention policy:
+  1. SELECT records WHERE
+     created_at < retention_threshold
+     AND legal_hold_until IS NULL
+     AND no_active_dispute_link
+  2. For each batch:
+     - Anonymize PII fields (per data class rules)
+     - Move to cold storage (S3 Glacier) if applicable
+     - Audit: data.retention_anonymized
+  3. After grace (30 days post-anonymization):
+     - Hard delete
+     - Audit: data.retention_deleted
+```
+
+Examples:
+- Order data > 10 years → review + tax-purpose retention check → delete if cleared
 - Event log > 90 days → MongoDB TTL auto-delete
-- Quality photos > 2 years → archive
+- Quality photos > 2 years → archive to Glacier, anonymize metadata
+- Failed login logs > 90 days → delete
 
 ## 7. Vulnerability management
 

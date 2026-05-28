@@ -17,29 +17,40 @@ Migration chia thành **5 phases tuần tự**, mỗi phase tự deploy độc l
 ## Roadmap visualization
 
 ```text
-v3.4 ──► v3.5 ──► v3.6 ──► v3.7 ──► v3.8 ──► v4.0
- NOW    DB +Go   Rules    Kafka    Masking   Multi-
-        global   engine   + CQRS   + DSR     region
-                 YAML     + CDC               GA
+v3.4 ──► v3.5 ──► v3.6 ──► v3.6.5 ──► v3.7 ──► v3.8 ──► v4.0
+ NOW    DB +Go   Rules    Ledger    Kafka    Masking   Multi-
+        global   engine   cutover   + CQRS   + DSR     region
+        +ledger  YAML     (drop     + CDC               GA
+        shadow            old)
 ```
 
 | Phase | Version | Duration | Goal | Risk |
 |---|---|---|---|---|
-| **1** | v3.5 | 6 weeks | DB schema refactor + Go pkg/money + pkg/clock | 🟡 Medium |
+| **1** | v3.5 | **8 weeks** | DB schema refactor + Go pkg/money + Ledger build + dual-write shadow | 🟡 Medium |
 | **2** | v3.6 | 4 weeks | Rules Engine YAML rollout | 🟢 Low |
-| **3** | v3.7 | 8 weeks | Kafka + CQRS + Debezium CDC | 🔴 High |
-| **4** | v3.8 | 6 weeks | Dynamic Data Masking + PII APIs | 🟡 Medium |
+| **2.5** | v3.6.5 | **4 weeks** | **Ledger cutover (drop old wallet/earnings tables)** | 🔴 High |
+| **3** | v3.7 | 8 weeks | Kafka + CQRS + Debezium CDC (after outbox stable) | 🔴 High |
+| **4** | v3.8 | 6 weeks | Dynamic Data Masking + PII APIs + DSR | 🟡 Medium |
 | **5** | v4.0 GA | 4 weeks | Multi-region sovereignty deployment | 🔴 High |
 
-**Total**: ~28 weeks (~6 months active engineering) · không tính buffer cho testing/UAT/marketing prep.
+**Total**: ~34 weeks (~7-8 months active engineering) · không tính buffer cho testing/UAT/marketing prep.
+
+> 🔄 **Update từ Tech Lead review (2026-05-28)**: Migration plan adjusted để incorporate Doc 16/17/18 (Finance Ledger + Settlement + Event Catalog):
+> - **Phase 1** extended from 6w → 8w để build ledger trong v3.5
+> - **Phase 2.5** mới (4 weeks) cho ledger cutover ở v3.6.5
+> - **Phase 3** Kafka moved AFTER outbox-first stage stable (xem Doc 01 §7.6.0)
+> - Total +6 weeks vs original plan
 
 ---
 
-## Phase 1 · v3.5 · Database & Go foundations (6 weeks)
+## Phase 1 · v3.5 · DB foundations + Finance Ledger shadow (8 weeks · EXPANDED)
 
 ### Goal
 - DB schema ready cho multi-currency + UTC + i18n + country_code
 - Go `pkg/money`, `pkg/clock`, `pkg/timezone`, `pkg/i18n` shipped
+- **NEW**: Build Finance Ledger tables + `PostJournal` function
+- **NEW**: Dual-write shadow mode (ghi cả schema cũ và `journal_lines`)
+- **NEW**: Outbox table + in-process dispatcher
 - ALL data still in Vietnam, default currency=VND, default tz=Asia/Ho_Chi_Minh
 - **No user-facing changes**
 
@@ -47,31 +58,86 @@ v3.4 ──► v3.5 ──► v3.6 ──► v3.7 ──► v3.8 ──► v4.0
 
 | Week | Task | Owner | Doc reference |
 |---|---|---|---|
-| 1 | Create `smp_global` database với 5 tables (countries, currencies, currency_rates, tax_configs, i18n_translations) | DB | [Doc 02 · 7.5](./02-database/02-database-schema.md#75--v40-global-tables-db-smp_global--new) |
-| 1 | Seed 8 countries + 10 currencies + tax_configs for VN | DB | Same |
-| 2 | ALTER tables: add `country_code` + `currency` + `*_utc` columns to existing tables (orders, partner_wallet_transactions, partner_invoices, partner_payouts) | DB | [Doc 02 · 2.5](./02-database/02-database-schema.md#25--v40-conventions--global-ready-schema-patterns) |
-| 2 | Backfill existing data: country_code='VN', currency='VND', convert timestamps to UTC | DB | Same |
-| 3 | Build `pkg/money` Go package (Money struct, arithmetic, marshal) | Backend | [Doc 04 · 1.15](./03-backend/04-coding-standards-and-dev-setup.md#115-v40-patterns--money--time--i18n) |
-| 3 | Build `pkg/clock` (Clock interface, UTC, testable mock) | Backend | Same |
+| 1 | Create `smp_global` database với 5 tables (countries, currencies, currency_rates, tax_configs, i18n_translations) | DB | [Doc 02 · 7.5](./02-database/02-database-schema.md) |
+| 1 | Seed 8 countries + 10 currencies + tax_configs for VN (bps format) | DB | [Doc 02 · 7.6.6](./02-database/02-database-schema.md) |
+| 2 | ALTER existing tables: add `country_code` + `currency` + `*_utc` columns | DB | [Doc 02 · 2.5](./02-database/02-database-schema.md) |
+| 2 | Backfill existing data: country_code='VN', currency='VND', convert to UTC | DB | Same |
+| **2** | **Create `smp_finance` DB với 6 tables (accounts, journal_entries, journal_lines, outbox, dead_letters, tax_configs revised)** | **DB** | **[Doc 02 · 7.6](./02-database/02-database-schema.md)** |
+| **2** | **Seed Chart of Accounts (16 accounts)** | **DB** | **[Doc 02 · 7.6.1](./02-database/02-database-schema.md)** |
+| 3 | Build `pkg/money` (Money struct, arithmetic, MulBps, SplitBreakdown) | Backend | [Doc 04 · 1.15.1](./03-backend/04-coding-standards-and-dev-setup.md) |
+| 3 | Build `pkg/clock` (Clock interface, UTC, testable mock) | Backend | [Doc 04 · 1.15](./03-backend/04-coding-standards-and-dev-setup.md) |
 | 4 | Build `pkg/timezone` (IANA tz conversion) | Backend | Same |
 | 4 | Build `pkg/i18n` (translator với fallback chain) | Backend | Same |
-| 5 | Refactor finance-svc to use `pkg/money` (drop INT amount) | Backend | Same |
-| 5 | Refactor order-svc to use `*_utc` columns + `pkg/clock.NowUTC()` | Backend | Same |
-| 6 | Add `forbidigo` linter rules to CI to prevent regression | DevOps | Same |
-| 6 | UAT + Performance test + Deploy v3.5 production | All | n/a |
+| **4** | **Build `pkg/finance.PostJournal()` single-writer function** | **Backend** | **[Doc 16 · §2](./09-finance/16-finance-ledger-spec.md)** |
+| **5** | **Build `pkg/finance.TaxResolver` (cache + stale fallback)** | **Backend** | **[Doc 04 · 1.15.2](./03-backend/04-coding-standards-and-dev-setup.md)** |
+| **5** | **Build outbox dispatcher goroutine + handler registry** | **Backend** | **[Doc 18 · §5](./09-finance/18-event-catalog.md)** |
+| **5** | **Build Redis dedup store cho consumer idempotency** | **Backend** | **[Doc 18 · §1](./09-finance/18-event-catalog.md)** |
+| **6** | **Refactor finance-svc: dual-write (ghi cả `partner_wallet_transactions` cũ + `journal_lines` mới)** | **Backend** | **[Doc 02 · 7.6.7](./02-database/02-database-schema.md)** |
+| **6** | **Implement journal templates (gateway pay, wallet pay, COD collected/remitted, refund matrix)** | **Backend** | **[Doc 16 · §3](./09-finance/16-finance-ledger-spec.md)** |
+| 6 | Refactor order-svc to use `*_utc` columns + `pkg/clock.NowUTC()` | Backend | [Doc 04 · 1.15](./03-backend/04-coding-standards-and-dev-setup.md) |
+| **7** | **Build daily reconcile job (compare old wallet balances vs new subledger view)** | **Backend** | **[Doc 02 · 7.6.7](./02-database/02-database-schema.md)** |
+| **7** | **Add `forbidigo` linter rules cho VAT/commission hardcode** | **DevOps** | **[Doc 04 · 1.15.2](./03-backend/04-coding-standards-and-dev-setup.md)** |
+| 7 | Add `forbidigo` linter rules cho `time.Now()` direct + hardcoded currency | DevOps | [Doc 04 · 1.10](./03-backend/04-coding-standards-and-dev-setup.md) |
+| 8 | UAT + Performance test (especially `journal_lines` queries) + Deploy v3.5 production | All | n/a |
 
 ### Acceptance criteria
 - [ ] All money fields in DB có pair `amount + currency` columns
 - [ ] All timestamps in DB lưu UTC (verified via spot-check 100 records cross-tz)
-- [ ] Linter blocks `time.Now()` direct + hardcoded currency strings
+- [ ] Linter blocks `time.Now()` direct + hardcoded currency + hardcoded VAT rates
 - [ ] Zero data loss in migration (recon job: count rows before/after match)
-- [ ] All existing tests pass + new tests cover Money/Clock packages
+- [ ] **NEW**: `journal_lines` được populated cho mọi financial transaction (dual-write)
+- [ ] **NEW**: Daily reconcile job báo zero drift (giữa cũ và mới) trong 30 ngày liên tiếp
+- [ ] **NEW**: Outbox dispatcher process 10k events/day không crash
+- [ ] **NEW**: `PostJournal` enforce `Σdebit = Σcredit` (kiểm tra 1000 random entries OK)
+- [ ] **NEW**: Hash chain integrity verified daily (no broken links)
+- [ ] All existing tests pass + new tests cover Money/Clock/Finance packages
 - [ ] No user-facing change visible
 
 ### Rollback plan
 - DDL migrations have `down` scripts (golang-migrate)
-- Old columns kept for 30 days post-deploy as safety (`labor_price INT` + new `labor_price_amount BIGINT` both exist, code uses new, old shadow-updated)
-- Rollback = revert deploy + drop new columns
+- Old columns kept for 30 days post-deploy as safety
+- **NEW**: Old tables (`partner_wallet_transactions`) vẫn primary, ledger là shadow → tắt dual-write nếu cần
+- Feature flag `ENABLE_LEDGER_DUAL_WRITE=true` cho gradual rollout
+- Rollback = revert deploy + disable feature flag
+
+---
+
+## Phase 2.5 · v3.6.5 · Ledger cutover (4 weeks · NEW)
+
+### Goal
+- After v3.6 stable (Rules Engine deployed, no regressions)
+- Cutover read path từ legacy tables sang ledger subledger view
+- Drop legacy tables sau verification period
+
+### Tasks
+
+| Week | Task | Owner | Doc reference |
+|---|---|---|---|
+| 1 | Build subledger query layer (`pkg/finance/subledger.go`) với caching | Backend | [Doc 02 · 7.6.3](./02-database/02-database-schema.md) |
+| 1 | Verify 30-day reconcile zero drift report (pre-cutover gate) | DB + Finance | Same |
+| 2 | Update dashboards: customer wallet, agent earnings, partner wallet → query subledger view | Backend | Same |
+| 2 | Update API endpoints (`/wallet/balance`, `/earnings`) → subledger | Backend | Same |
+| 3 | Switch READ path sang ledger (flag: `USE_LEDGER_AS_SOURCE=true`) | Backend | Same |
+| 3 | Monitor 1 week: verify no discrepancies, performance OK | DevOps | Same |
+| 4 | DROP legacy tables: `partner_wallet_transactions`, `points_ledger`, `agent_earnings` (if exists) | DB | Same |
+| 4 | Remove dual-write code, simplify single-writer flow | Backend | Same |
+
+### Acceptance criteria
+- [ ] 30-day reconcile zero drift (pre-cutover gate)
+- [ ] All wallet/earnings/points queries use subledger view exclusively
+- [ ] Performance: subledger queries p99 < 100ms (with index `idx_jl_account_owner`)
+- [ ] Old tables dropped, no service references them
+- [ ] Audit shows balanced trial balance every day
+
+### Rollback plan
+- Keep dual-write code path until 2 weeks post-cutover (in case need switch back)
+- Feature flag `USE_LEDGER_AS_SOURCE=false` reverts read path
+- Drop tables = **point of no return** → only do after 2 weeks of stability + executive approval
+
+### Risks
+- 🔴 **High risk**: Drop tables không reversible → MUST verify perfectly trước cutover
+- Performance: subledger view query có thể slower than direct table read on small data; offset bằng index + caching
+- Mitigation: feature flag, gradual rollout, dual maintenance period
 
 ---
 
@@ -112,6 +178,13 @@ v3.4 ──► v3.5 ──► v3.6 ──► v3.7 ──► v3.8 ──► v4.0
 ---
 
 ## Phase 3 · v3.7 · Event-driven + CQRS + CDC (8 weeks · HIGHEST RISK)
+
+> 🔄 **Prerequisite (REVISED)**: Phase 1 (v3.5) đã ship outbox + in-process dispatcher (xem [Doc 01 §7.6.0](./01-architecture/01-architecture.md)). Phase 3 này upgrade từ in-process → Kafka khi:
+> - Order volume > 5,000/day
+> - Consumer types > 10
+> - Cần CDC → Elasticsearch (CQRS read model)
+>
+> Nếu trigger chưa đạt → **DEFER Phase 3** đến khi cần. Outbox + in-process dispatcher đủ cho pilot + medium scale.
 
 ### Goal
 - Kafka cluster deployed (KRaft mode, 3 brokers)
@@ -301,19 +374,36 @@ v3.4 ──► v3.5 ──► v3.6 ──► v3.7 ──► v3.8 ──► v4.0
 
 ## References
 
+### Core architecture & engineering
 - [Doc 00 · System Functional Overview](./00-system-functional-overview.md) — executive summary
-- [Doc 01 · Architecture](./01-architecture/01-architecture.md) — components Rules Engine + Event Bus
-- [Doc 02 · Database Schema](./02-database/02-database-schema.md) — v4.0 conventions + new tables + sharding
+- [Doc 01 · Architecture](./01-architecture/01-architecture.md) — components Rules Engine + Event Bus (Outbox-first §7.6.0)
+- [Doc 02 · Database Schema](./02-database/02-database-schema.md) — v4.0 conventions + finance ledger schema §7.6
 - [Doc 03 · API Contract](./03-backend/03-api-contract.md) — PII endpoints + masking responses
-- [Doc 04 · Coding Standards](./03-backend/04-coding-standards-and-dev-setup.md) — pkg/money + pkg/clock + pkg/rules
+- [Doc 04 · Coding Standards](./03-backend/04-coding-standards-and-dev-setup.md) — pkg/money + SplitBreakdown §1.15.1 + TaxResolver §1.15.2
 - [Doc 05 · Glossary](./05-ba/05-glossary.md) — i18n + Rules + CQRS + Security terms
+
+### Operations
 - [Doc 06 · Environment Matrix](./07-devops/06-environment-matrix.md) — Rules Engine deploy + Multi-region
-- [Doc 08 · Auth Spec](./08-security/08-auth-spec.md) — PII unmask scopes
 - [Doc 11 · Runbook](./07-devops/11-runbook-incidents.md) — INC-006 to INC-012
-- [Doc 12 · Audit Log](./08-security/12-audit-log-spec.md) — PII + DSR + Compliance events
-- [Doc 13 · Data Classification](./08-security/13-data-classification-encryption.md) — Masking + Multi-jurisdiction
+
+### Security & compliance
+- [Doc 08 · Auth Spec](./08-security/08-auth-spec.md) — PII unmask scopes
+- [Doc 12 · Audit Log](./08-security/12-audit-log-spec.md) — Hash chain v3.5+ + DSR Events §11.5 + PDPL compliance §13
+- [Doc 13 · Data Classification](./08-security/13-data-classification-encryption.md) — Masking + Multi-jurisdiction + Retention table §6.5
+
+### BA & QA
 - [Doc 14 · KPI Metrics](./05-ba/14-kpi-metrics-definition.md) — CQRS Read Model
-- [Doc 15 · Business Rules](./05-ba/15-business-rules.md) — YAML migration + Reconciliation rules
+- [Doc 15 · Business Rules](./05-ba/15-business-rules.md) — Sections L (Warranty), M (COD), N (Loyalty), O (Complaint), P (Reconciliation)
+
+### **Finance specifications (v3.5+ NEW)**
+- [Doc 16 · Finance Ledger Spec](./09-finance/16-finance-ledger-spec.md) — Pattern 2 double-entry, journal templates, rounding rule
+- [Doc 17 · Payment & Settlement Lifecycle](./09-finance/17-payment-settlement-lifecycle.md) — State machine + transition matrix
+- [Doc 18 · Event Catalog](./09-finance/18-event-catalog.md) — Outbox + DLQ + 16 events registry
+
+### **Legal & policy (DRAFT - awaits VN lawyer review)**
+- [Doc 19 · Service Guarantee Policy](./10-legal/19-service-guarantee-policy.md) — Warranty scope + reserve fund
+- [Doc 20 · COD Payment Policy](./10-legal/20-cod-payment-policy.md) — COD obligations + e-invoice
+- [Doc 21 · PDPL Data Policy](./10-legal/21-pdpl-data-policy.md) — PDPL VN (Luật 91/2025 + NĐ 356)
 
 ---
 
@@ -321,4 +411,5 @@ v3.4 ──► v3.5 ──► v3.6 ──► v3.7 ──► v3.8 ──► v4.0
 
 | Date | Author | Change |
 |---|---|---|
-| 2026-05-28 | Docs team | Initial migration plan v3.4 → v4.0 |
+| 2026-05-28 | Docs team | Initial migration plan v3.4 → v4.0 (5 phases, 28 weeks) |
+| 2026-05-28 | Docs team | **REVISED** post Tech Lead review: Phase 1 expanded (+2w ledger) + Phase 2.5 NEW (4w cutover) + Phase 3 outbox prerequisite · Total 34 weeks |

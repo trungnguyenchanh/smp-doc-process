@@ -1,8 +1,10 @@
 # SMP · System Functional Overview
 
-**Version**: 3.3 · **Audience**: All roles (BA, Dev, QC, DevOps, Security, Stakeholder) · **Reading time**: 30–45 min
+**Version**: 3.4 · **Audience**: All roles (BA, Dev, QC, DevOps, Security, Stakeholder) · **Reading time**: 30–45 min
 
 > Doc này là **executive summary** mô tả toàn bộ chức năng hệ thống SMP. Đọc trước khi đi sâu vào các docs kỹ thuật khác.
+
+> 📚 **Current state (v3.4)**: 21 docs + 1 migration plan · Outbox-first event pattern · Finance Ledger spec (Pattern 2 double-entry) · Legal policy pack (3 policies aligned với PDPL VN, NĐ 70/2025) · Ready cho v3.5 implementation kick-off.
 
 ---
 
@@ -635,25 +637,43 @@ Chi tiết: xem [Doc 01 · Architecture section 5 (Data flow)](01-architecture/0
 - ✅ MIGRATION-PLAN-v4.md (xem root repo)
 - 🔄 Deployed: GitHub Pages + Cloudflare (16 docs accessible)
 
-### v3.5 · Database + Go foundations (📅 planned · 6 weeks)
+### v3.5 · DB foundations + Finance Ledger shadow (📅 planned · 8 weeks · EXPANDED)
 - ⏳ Refactor DB: multi-currency columns (`amount` + `currency`)
 - ⏳ Refactor DB: UTC timestamps (`*_utc` columns)
 - ⏳ Add `country_code` to user-tenant tables
 - ⏳ Create `smp_global` DB (countries, currencies, currency_rates, tax_configs, i18n_translations)
 - ⏳ Build Go packages: `pkg/money`, `pkg/clock`, `pkg/timezone`, `pkg/i18n`
-- ⏳ Linter rules forbid hardcoded VND + `time.Now()`
-- 📖 Reference: [Doc 02 section 2.5](02-database/02-database-schema.md#25--v40-conventions--global-ready-schema-patterns), [Doc 04 section 1.15](03-backend/04-coding-standards-and-dev-setup.md)
+- ⏳ Linter rules forbid hardcoded VND + `time.Now()` + hardcoded VAT
+- ⏳ **NEW**: Create `smp_finance` DB (6 tables: accounts, journal_entries, journal_lines, outbox, dead_letters, tax_configs)
+- ⏳ **NEW**: Seed Chart of Accounts (16 accounts)
+- ⏳ **NEW**: Build `pkg/finance.PostJournal` single-writer + `TaxResolver` + `SplitBreakdown`
+- ⏳ **NEW**: Outbox dispatcher goroutine + Redis dedup
+- ⏳ **NEW**: Dual-write shadow mode (legacy + ledger cùng cập nhật)
+- ⏳ **NEW**: Daily reconcile job (zero drift gate cho cutover)
+- 📖 Reference: [Doc 02 section 2.5 + 7.6](02-database/02-database-schema.md), [Doc 04 section 1.15-1.15.2](03-backend/04-coding-standards-and-dev-setup.md), [Doc 16](09-finance/16-finance-ledger-spec.md), [Doc 18](09-finance/18-event-catalog.md)
 
 ### v3.6 · Rules Engine YAML (📅 planned · 4 weeks)
 - ⏳ Build `pkg/rules` (antonmedv/expr + hot-reload via ConfigMap)
 - ⏳ Migrate 80+ rules từ Go code sang `rules_engine.yaml`
 - ⏳ Setup repo `smp-rules-config` riêng với BA-friendly PR workflow
 - ⏳ Rule ID convention mới: `<country>.<category>.<num>` (multi-country ready)
-- 📖 Reference: [Doc 01 section 7.5](01-architecture/01-architecture.md), [Doc 15 Appendix](05-ba/15-business-rules.md#appendix--full-rules_engineyaml-sample-v40-preview)
+- 📖 Reference: [Doc 01 section 7.5](01-architecture/01-architecture.md), [Doc 15 Appendix](05-ba/15-business-rules.md)
+
+### v3.6.5 · Ledger cutover (📅 planned · 4 weeks · NEW · HIGH RISK)
+- ⏳ Pre-cutover gate: 30-day reconcile zero drift verified
+- ⏳ Switch read path: dashboards + APIs → subledger view
+- ⏳ Drop legacy tables: `partner_wallet_transactions`, etc.
+- ⏳ Remove dual-write code, simplify single-writer flow
+- 📖 Reference: [Doc 02 section 7.6.7](02-database/02-database-schema.md), [MIGRATION-PLAN Phase 2.5](MIGRATION-PLAN-v4.md)
 
 ### v3.7 · Event-driven + CQRS + CDC (📅 planned · 8 weeks · HIGH RISK)
+- 🔄 **Prerequisite**: Outbox stable từ v3.5. Phase này chỉ trigger khi đạt thresholds:
+  - Order volume > 5,000/day
+  - Consumer types > 10
+  - Cần CDC → Elasticsearch
 - ⏳ Apache Kafka 3.7 KRaft cluster (3 brokers production)
-- ⏳ 9 topics + DLQ (orders, payments, agents, partners, dispatch, quality, integration, audit)
+- ⏳ Migrate outbox → Kafka pipeline (Debezium binlog reader)
+- ⏳ 9 topics + DLQ
 - ⏳ Debezium MySQL → Kafka CDC pipeline
 - ⏳ Elasticsearch read model với ILM (hot 7d, warm 60d, cold 1y)
 - ⏳ Dashboard queries migrate sang ES (10x faster aggregations)
@@ -703,7 +723,7 @@ Chi tiết: xem [Doc 01 · Architecture section 5 (Data flow)](01-architecture/0
 - **Automated Reconciliation**: Daily job đối soát partner wallet vs payment gateway, detect mismatch >0.01%, auto-alert Finance.
 - **Compliance**: PDPA (VN), CPRA (US California), PIPL (China), GDPR (EU). Right to Erasure (30 ngày), Data Portability (7 ngày), Breach notification 72h.
 
-**Migration strategy**: 5 phases tuần tự (v3.5 → v3.6 → v3.7 → v3.8 → v4.0 GA), ~28 weeks total. Each phase ships independently with rollback path. Xem chi tiết full plan ở [MIGRATION-PLAN-v4.md](MIGRATION-PLAN-v4.md).
+**Migration strategy**: 6 phases tuần tự (v3.5 → v3.6 → v3.6.5 → v3.7 → v3.8 → v4.0 GA), ~34 weeks total (REVISED post Tech Lead review). Each phase ships independently with rollback path. Xem chi tiết full plan ở [MIGRATION-PLAN-v4.md](MIGRATION-PLAN-v4.md).
 
 ---
 
@@ -728,6 +748,12 @@ Khi đọc xong overview này, đào sâu theo nhu cầu:
 | Data classification + encryption | [Doc 13 · Data Class](08-security/13-data-classification-encryption.md) |
 | KPI formulas + dashboard | [Doc 14 · KPI Metrics](05-ba/14-kpi-metrics-definition.md) |
 | Business rules chi tiết (80+ rules) | [Doc 15 · Business Rules](05-ba/15-business-rules.md) |
+| **Finance ledger · double-entry · journal templates** | [Doc 16 · Finance Ledger Spec](09-finance/16-finance-ledger-spec.md) (v3.5+ DRAFT) |
+| **Payment & settlement state machine** | [Doc 17 · Settlement Lifecycle](09-finance/17-payment-settlement-lifecycle.md) (v3.5+ DRAFT) |
+| **Events catalog (Outbox + DLQ)** | [Doc 18 · Event Catalog](09-finance/18-event-catalog.md) (v3.5+ DRAFT) |
+| **Service guarantee policy (warranty)** | [Doc 19 · Service Guarantee](10-legal/19-service-guarantee-policy.md) (legal DRAFT) |
+| **COD payment policy (legal)** | [Doc 20 · COD Payment Policy](10-legal/20-cod-payment-policy.md) (legal DRAFT) |
+| **PDPL VN data policy** | [Doc 21 · PDPL Data Policy](10-legal/21-pdpl-data-policy.md) (legal DRAFT) |
 
 ---
 

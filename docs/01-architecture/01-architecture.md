@@ -253,8 +253,9 @@ order-svc ──► partner-svc.checkWalletBalance(partner_id)
 | Config | Viper · env vars + ConfigMap |
 | DB migrations | golang-migrate · up/down scripts in repo |
 | **Rules Engine** | **`antonmedv/expr` · YAML rules in ConfigMap · hot-reload via fsnotify** (v4.0) |
-| **Event Bus** | **Apache Kafka · multi-partition · consumer groups** (v4.0) |
-| **CDC** | **Debezium MySQL connector → Kafka → Elasticsearch sink** (v4.0) |
+| **Event Bus (Stage A)** | **Transactional outbox + in-process dispatcher** (v3.5+ pilot, no Kafka) |
+| **Event Bus (Stage B)** | **Apache Kafka · multi-partition · consumer groups** (v3.7+ when scale demands it) |
+| **CDC** | **Debezium MySQL connector → Kafka → Elasticsearch sink** (v3.7+) |
 
 ---
 
@@ -367,7 +368,80 @@ Repo: https://github.com/expr-lang/expr · used by: Aviasales, Argo CD, OctoLink
 
 > v3.x dùng sync HTTP cho mọi inter-service communication. v4.0 chuyển sang **event-driven** cho dispatch + pricing + analytics, dùng Apache Kafka + Debezium CDC.
 
-### 7.6.1 Architecture overview
+### 7.6.0 Evolution path · Outbox-first, Kafka khi cần scale (REVISED v3.5+)
+
+> 🔄 **Update từ Tech Lead review (2026-05-28)**: Implementation **không nhảy thẳng Kafka**. Chia 2 giai đoạn rõ ràng để giảm risk + operational burden trong pilot.
+
+**Stage A · v3.5 · Outbox + in-process dispatcher (KHÔNG cần Kafka)**
+
+Pilot phase (~300-500 orders/day) **không cần** distributed event bus. Đủ với:
+- `outbox` table (xem [Doc 02 section 7.6.4](../02-database/02-database-schema.md))
+- Background goroutine trong cùng service polling outbox, dispatch in-process tới handlers
+- `dead_letters` table cho DLQ
+- Redis dedup `processed:{consumer}:{event_id}` cho consumer idempotency
+
+```text
+        ┌──────────┐
+        │order-svc │  Single transaction:
+        └────┬─────┘   1. UPDATE orders ...
+             │         2. INSERT journal_lines ...
+             ▼         3. INSERT outbox ...
+        ┌──────────┐  ← COMMIT
+        │  MySQL   │
+        └────┬─────┘
+             │
+             ▼ poll
+        ┌──────────────────────┐
+        │ outbox dispatcher    │  Goroutine trong order-svc
+        │ (in-process worker)  │  SELECT * FROM outbox WHERE status='pending'
+        └────┬─────────────────┘  → call handlers in-process
+             │
+             ├──► handler: notify-svc (HTTP call)
+             ├──► handler: finance-svc (in-proc func nếu cùng service)
+             └──► handler: quality-svc (HTTP call)
+                         │
+                         ▼ fail > 5 retries
+                  ┌──────────────┐
+                  │ dead_letters │
+                  └──────────────┘
+```
+
+**Stage B · v3.7+ · Migrate sang Kafka khi scale demands it**
+
+Trigger để upgrade Kafka:
+- Order volume > 5,000/day
+- Number of consumer types > 10
+- Cần CDC từ MySQL → Elasticsearch (CQRS read model)
+- Multi-region replication
+
+**Migration approach (zero-downtime)**:
+1. Add Debezium connector đọc binlog của `outbox` table → publish sang Kafka
+2. Consumer code không đổi (vẫn implement same `EventHandler` interface)
+3. Switch consumer wiring: in-process → Kafka subscriber
+4. Outbox vẫn giữ làm "source of truth" cho replay/audit
+
+→ Code consumer **không cần refactor** khi upgrade vì:
+- Envelope schema giống nhau (xem [Doc 18 · Event Catalog](../09-finance/18-event-catalog.md))
+- Idempotency key vẫn dùng Redis dedup
+- Handler interface không đổi
+
+**Pros của Outbox-first approach**:
+- ✅ Zero Kafka ops trong pilot (đỡ DevOps load)
+- ✅ Atomic guarantee (business data + event cùng transaction)
+- ✅ Consumer idempotency dễ implement
+- ✅ Replay/audit dễ (query outbox table)
+- ✅ Migration path rõ ràng khi cần scale
+
+**Cons**:
+- ❌ Throughput giới hạn (~thousand events/sec max trên 1 MySQL)
+- ❌ Latency higher than Kafka (~100ms polling interval vs ~5ms Kafka)
+- ❌ Hard to fan-out > 10 consumers (mỗi consumer poll thì DB load tăng)
+
+Acceptable cho pilot. Scale lên Kafka **khi cần** chứ không phải **vì cool**.
+
+### 7.6.1 Architecture overview (v3.7+ Kafka stage)
+
+> Diagram dưới đây là **target architecture cho v3.7+** khi đã migrate lên Kafka. Cho v3.5-3.6, thay block "Apache Kafka" bằng "Outbox table + in-process dispatcher".
 
 ```text
                   Write Path (Commands)              Read Path (Queries)

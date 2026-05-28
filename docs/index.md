@@ -1,8 +1,10 @@
 # SMP Process Documentation · v3.4
 
-**Phiên bản**: 3.4 · **Ngày**: 2026-05-27 · **Scope**: Batch A + B (15 docs cho pilot)
+**Phiên bản**: 3.4 · **Ngày**: 2026-05-28 · **Scope**: 21 docs (15 baseline + 3 finance + 3 legal) + Migration Plan
 
-Tài liệu chuẩn hoá process cho team SMP (10+ người · BA, Dev, QC, DevOps, Security) sử dụng **Go + MySQL + Redis + MongoDB**.
+Tài liệu chuẩn hoá process cho team SMP (10+ người · BA, Dev, QC, DevOps, Security, Finance, Legal) sử dụng **Go + MySQL + Redis + MongoDB**.
+
+🚀 **Latest update**: Tích hợp Finance Ledger Spec (Pattern 2 double-entry) + Trust & Legal Policy Pack (PDPL VN compliance) từ Tech Lead review. Migration plan REVISED · 6 phases · 34 weeks. Sẵn sàng v3.5 kick-off.
 
 ---
 
@@ -67,6 +69,24 @@ Sau khi product spec v3.1/v3.2/v3.3 đã ổn (UI/UX + business flow), team chuy
 | 12 | [Audit Log Spec](./08-security/12-audit-log-spec.md) | Security, Backend, Compliance | Event categories · schema · naming convention · 7-year retention · query API · tamper resistance · PII handling · compliance mapping (PDPA VN) |
 | 13 | [Data Classification + Encryption Policy](./08-security/13-data-classification-encryption.md) | Security, Backend, DevOps | L0-L4 classification · field encryption (AES-256) · key management (Vault) · TLS · PII display masking · vendor risk · compliance checklist · breach response |
 
+### 💰 Finance (v3.5+ specification · DRAFT)
+| # | Doc | Audience | Purpose |
+|---|---|---|---|
+| 16 | [Finance Ledger Spec](./09-finance/16-finance-ledger-spec.md) | Finance, Backend, BA | Chart of Accounts · Pattern 2 (control account + subledger dimension) · double-entry bookkeeping · journal templates (gateway/wallet/COD/refund) · rounding rule (residual N=P-C-V) · VAT từ config · ledger↔settlement SoT |
+| 17 | [Payment & Settlement Lifecycle](./09-finance/17-payment-settlement-lifecycle.md) | Backend, Finance, BA, QC | Settlement state machine · 9 states (INIT→AWAITING_GATEWAY→SETTLED→...) · transition matrix · invariants · COD lifecycle (collected→remitted) · 5 lifecycle questions chốt cứng |
+| 18 | [Event Catalog](./09-finance/18-event-catalog.md) | Backend, BA, QC, DevOps | Outbox + DLQ pattern (KHÔNG cần Kafka cho pilot) · envelope schema · 16 events registry · payload contracts (SettlementSettled, CODCollected, RefundSettled) · consumer idempotency · versioning rules |
+
+> **Note**: 3 docs trên là **DRAFT specification** cho v3.5+ implementation. Schema hiện tại (Doc 02) sẽ dual-write vào ledger mới ở Phase v3.5, cutover ở v3.6.
+
+### 📜 Legal & Compliance (DRAFT · awaits VN lawyer review)
+| # | Doc | Audience | Purpose |
+|---|---|---|---|
+| 19 | [Service Guarantee Policy](./10-legal/19-service-guarantee-policy.md) | Legal, Ops, BA, Founder | Phạm vi bảo hành · re-service miễn phí · exclusions · SLA 48h · ai gánh chi phí · quỹ `service_guarantee_reserve` (KHÔNG dùng "insurance") |
+| 20 | [COD Payment Policy](./10-legal/20-cod-payment-policy.md) | Legal, Ops, Finance, BA | Điều kiện COD (trần đơn, KYC thợ) · 2 mốc UX vs kế toán · nghĩa vụ remit T+1 · refund-before-remit · e-invoice theo NĐ 70/2025 · viện dẫn luật chi tiết |
+| 21 | [PDPL Data Policy](./10-legal/21-pdpl-data-policy.md) | Legal, DPO, Security, Ops | PDPL VN (Luật 91/2025/QH15 + NĐ 356/2025) · phân loại dữ liệu · retention table · ngoại lệ legal hold · quyền chủ thể · checklist tuân thủ · chat anti-off-platform |
+
+> **⚠️ Disclaimer chung**: 3 docs Legal là **bản thảo định hình chính sách**, KHÔNG phải tư vấn pháp lý. Mọi điều khoản công bố cho KH/thợ/partner phải qua luật sư VN rà soát.
+
 ---
 
 ## Reading order theo vai trò
@@ -115,8 +135,29 @@ Sau khi product spec v3.1/v3.2/v3.3 đã ổn (UI/UX + business flow), team chuy
 4. [13 Data Classification](./08-security/13-data-classification-encryption.md)
 5. [11 Runbook](./07-devops/11-runbook-incidents.md) (incident response)
 
+### Finance / Accounting (v3.5+ implementation team)
+1. [00 System Functional Overview](./00-system-functional-overview.md) — big picture (45 min)
+2. [05 Glossary](./05-ba/05-glossary.md) — financial terms first
+3. [16 Finance Ledger Spec](./09-finance/16-finance-ledger-spec.md) — Pattern 2, journal templates, rounding
+4. [17 Payment & Settlement Lifecycle](./09-finance/17-payment-settlement-lifecycle.md) — state machine
+5. [18 Event Catalog](./09-finance/18-event-catalog.md) — events between services
+6. [15 Business Rules](./05-ba/15-business-rules.md) — pricing + payment rules
+7. [20 COD Payment Policy](./10-legal/20-cod-payment-policy.md) — legal context cho COD
+
+### Legal / Compliance (DPO, Legal Officer)
+1. [00 System Functional Overview](./00-system-functional-overview.md) — big picture (45 min)
+2. [19 Service Guarantee Policy](./10-legal/19-service-guarantee-policy.md) — warranty/guarantee scope
+3. [20 COD Payment Policy](./10-legal/20-cod-payment-policy.md) — COD legal obligations
+4. [21 PDPL Data Policy](./10-legal/21-pdpl-data-policy.md) — PDPL VN compliance
+5. [13 Data Classification](./08-security/13-data-classification-encryption.md) — technical encryption mapping
+6. [12 Audit Log](./08-security/12-audit-log-spec.md) — PII access tracking
+
 ### Stakeholder (CEO, Investor, Partner mới)
-**Chỉ cần đọc** [Doc 00 · System Functional Overview](./00-system-functional-overview.md) — 30-45 min. Đủ để hiểu hệ thống.
+**Đọc Doc 00 + Legal Pack**:
+1. [00 System Functional Overview](./00-system-functional-overview.md) — 30-45 min
+2. [19 Service Guarantee Policy](./10-legal/19-service-guarantee-policy.md) — hiểu commitment với KH
+3. [20 COD Payment Policy](./10-legal/20-cod-payment-policy.md) — hiểu risk model COD
+4. [21 PDPL Data Policy](./10-legal/21-pdpl-data-policy.md) — hiểu data compliance posture
 
 ---
 
