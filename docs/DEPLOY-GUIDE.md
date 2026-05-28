@@ -117,7 +117,7 @@ Theo dõi build tại: `https://github.com/trungnguyenchanh/smp-doc-process/acti
 ### Site URL
 
 Sau khi deploy lần đầu (~2 phút), site sẽ available tại:
-```
+```text
 https://trungnguyenchanh.github.io/smp-doc-process/
 ```
 

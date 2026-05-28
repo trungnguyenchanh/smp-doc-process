@@ -32,7 +32,7 @@
 ## 2. Standard headers
 
 **Request:**
-```
+```text
 Authorization: Bearer <jwt>
 X-Request-Id: <ulid>
 X-Client: mobile-customer/3.3.0 | mobile-tech/3.3.0 | admin-web/3.3.0
@@ -40,7 +40,7 @@ Accept-Language: vi-VN
 ```
 
 **Response:**
-```
+```text
 X-Request-Id: <echoed>
 X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 58

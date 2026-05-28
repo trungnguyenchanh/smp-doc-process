@@ -27,7 +27,7 @@
 
 Mỗi service repo follow:
 
-```
+```text
 smp-order-svc/
 ├── cmd/
 │   └── server/
@@ -423,7 +423,7 @@ Add custom linter `pkg/lint/no_currency_string.go` để catch các pattern ph�
 
 #### Package structure
 
-```
+```text
 pkg/rules/
 ├── engine.go          # Engine, load YAML, compile expressions
 ├── types.go           # Rule, Context, Decision types
@@ -903,7 +903,7 @@ make seed   # gọi script load master-data-v3.3.json vào DB
 ```
 
 Output sample:
-```
+```text
 Seeded 8 skills
 Seeded 22 steps
 Seeded 20 material_types
@@ -967,7 +967,7 @@ Max branch life: 3 days. Sau đó force rebase + ship hoặc abandon.
 
 ### 3.2 Commit message (Conventional Commits)
 
-```
+```text
 <type>(<scope>): <short summary>
 
 <body explaining what and why>
@@ -978,7 +978,7 @@ Max branch life: 3 days. Sau đó force rebase + ship hoặc abandon.
 Types: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `perf`, `style`
 
 Example:
-```
+```text
 feat(order): support partner_customer source with private dispatch
 
 Add Source, PartnerID, DispatchVisibility fields to order domain.

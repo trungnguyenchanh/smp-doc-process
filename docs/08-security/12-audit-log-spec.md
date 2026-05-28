@@ -174,7 +174,7 @@ Audit log ghi nhận **mọi hành động có ảnh hưởng** đến data, tà
 Format: `<category>.<resource>.<verb>[.<qualifier>]`
 
 Examples:
-```
+```text
 auth.user.login
 auth.user.login.failed
 auth.user.logout
@@ -470,7 +470,7 @@ Response: paginated list.
 ### 9.3 Query audit (meta-audit)
 
 **Important**: Every audit log query itself MUST audit (self-referential):
-```
+```text
 data.audit_log.queried
 ```
 

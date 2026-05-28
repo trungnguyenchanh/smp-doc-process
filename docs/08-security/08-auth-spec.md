@@ -67,7 +67,7 @@ Private key stored in Vault, public key exposed via JWKS endpoint for services t
 
 ### 3.1 Customer login (Phone OTP)
 
-```
+```text
 Customer mobile app
     │ POST /auth/otp/request {"phone": "+84..."}
     ▼
@@ -82,7 +82,7 @@ App store tokens in secure storage (Keychain iOS, Keystore Android)
 
 ### 3.2 Ops/Partner login (Email + Password + 2FA)
 
-```
+```text
 Browser
     │ POST /auth/login {"email":"hung@hungac.vn", "password":"..."}
     ▼
@@ -97,7 +97,7 @@ auth-svc verify TOTP → issue JWT
 
 ### 3.3 Refresh token rotation
 
-```
+```text
 Mobile app (token expired)
     │ POST /auth/refresh {"refresh_token": "..."}
     ▼
@@ -111,7 +111,7 @@ auth-svc:
 ## 4. Roles & scopes catalog
 
 ### 4.1 Customer scopes
-```
+```text
 orders.read.own
 orders.create.own
 orders.cancel.own
@@ -123,7 +123,7 @@ profile.update.own
 ```
 
 ### 4.2 Technician scopes
-```
+```text
 orders.read.assigned
 orders.accept
 orders.transit_stage
@@ -135,7 +135,7 @@ earnings.read.own
 ```
 
 ### 4.3 Ops admin scopes (default · super-admin có all)
-```
+```text
 # Operations
 orders.read.all
 orders.cancel.any
@@ -225,7 +225,7 @@ Auto-scoped to `current_user.ctx.partner_id`:
 
 #### Unmask request flow
 
-```
+```text
 Caller request data
         ▼
 API Gateway middleware checks JWT scope
@@ -420,7 +420,7 @@ Stored in Redis: `session:<token_jti>` → user_id, expires_at
 
 ### 8.2 Logout
 
-```
+```text
 POST /auth/logout
 Header: Authorization: Bearer <token>
 
@@ -442,7 +442,7 @@ Over limit → oldest session auto-invalidated.
 
 External integrations (inside, wms) use API keys, not JWT:
 
-```
+```text
 Authorization: Bearer api_<32-char-token>
 ```
 
@@ -510,7 +510,7 @@ Block all others. No wildcard origins in prod.
 | Webhook senders | 1000/min | Per source IP |
 
 Headers:
-```
+```text
 X-RateLimit-Limit: 60
 X-RateLimit-Remaining: 58
 X-RateLimit-Reset: 1716800060

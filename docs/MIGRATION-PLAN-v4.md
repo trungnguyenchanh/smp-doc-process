@@ -16,7 +16,7 @@ Migration chia thành **5 phases tuần tự**, mỗi phase tự deploy độc l
 
 ## Roadmap visualization
 
-```
+```text
 v3.4 ──► v3.5 ──► v3.6 ──► v3.7 ──► v3.8 ──► v4.0
  NOW    DB +Go   Rules    Kafka    Masking   Multi-
         global   engine   + CQRS   + DSR     region

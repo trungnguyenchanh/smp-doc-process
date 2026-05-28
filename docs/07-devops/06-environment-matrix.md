@@ -89,7 +89,7 @@
 
 ### 5.2 Vault setup
 
-```
+```text
 Vault path structure:
   secret/smp/<env>/<service>/<key>
 
@@ -114,7 +114,7 @@ metadata:
 Developer dùng `.env` file (gitignored). NOT in Vault.
 
 `.env.example` (committed) chỉ có placeholder:
-```
+```text
 MYSQL_PASSWORD=<dev_password>
 INSIDE_API_TOKEN=<get_from_team_lead>
 ```
@@ -184,7 +184,7 @@ data:
 
 ### Repo separation
 
-```
+```text
 github.com/trungnguyenchanh/smp-rules-config/   ← repo riêng
 ├── environments/
 │   ├── dev/
@@ -251,7 +251,7 @@ spec:
 
 ### Deploy flow
 
-```
+```text
 1. BA edit rules_engine.yaml trong smp-rules-config repo
    ▼
 2. Create PR · CI runs:
@@ -339,7 +339,7 @@ Master data only. Real customer/order data from launch.
 
 ## 8. Deployment pipeline summary
 
-```
+```text
 Developer push to feature branch
        ↓
 GitHub Actions CI runs
@@ -445,7 +445,7 @@ DevOps review monthly, alert if > 110% budget.
 
 ### 14.1 Cluster topology
 
-```
+```text
                        ┌────────────────────────────────┐
                        │  Global Control Plane          │
                        │  (Observability + CI/CD only,  │
@@ -555,7 +555,7 @@ Each cluster is **independent** — failure of 1 cluster does NOT affect others.
 
 ### 14.7 Deployment sequence (per release)
 
-```
+```text
 1. Engineer merges PR to main
    ▼
 2. CI builds Docker image (single image for all regions)

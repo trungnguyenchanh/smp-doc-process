@@ -6,7 +6,7 @@
 
 ## 1. Context (Level 1)
 
-```
+```text
                        ┌────────────────────┐
                        │   End Customer     │
                        │  (cá nhân · mobile)│
@@ -42,7 +42,7 @@
 
 ## 2. Container (Level 2)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────┐
 │                            SMP Platform                                 │
 │                                                                         │
@@ -136,7 +136,7 @@
 
 ### 5.1 Order creation (Customer direct)
 
-```
+```text
 Mobile (Customer)
    │ POST /api/v1/orders
    ▼
@@ -161,7 +161,7 @@ API Gateway ──► order-svc
 
 ### 5.2 Material check during quote (Technician)
 
-```
+```text
 Tech app
    │ POST /api/v1/orders/{id}/materials/check
    ▼
@@ -181,7 +181,7 @@ order-svc ──► integration-svc
 
 ### 5.3 Partner private dispatch
 
-```
+```text
 Partner UI (admin SMP với RBAC scoped)
    │ POST /api/v1/orders (source=partner_customer, visibility=private)
    ▼
@@ -202,7 +202,7 @@ order-svc ──► partner-svc.checkWalletBalance(partner_id)
 
 ## 6. Deployment topology
 
-```
+```text
                     ┌─────────────────┐
                     │  Cloudflare     │
                     │  CDN + WAF      │
@@ -264,7 +264,7 @@ order-svc ──► partner-svc.checkWalletBalance(partner_id)
 
 ### 7.5.1 Component diagram
 
-```
+```text
                        Kubernetes Cluster
   ┌──────────────────────────────────────────────────────────────┐
   │                                                              │
@@ -307,7 +307,7 @@ order-svc ──► partner-svc.checkWalletBalance(partner_id)
 
 ### 7.5.2 Hot reload mechanism
 
-```
+```text
 1. BA/Ops update rules_engine.yaml trong Git repo
    ▼
 2. PR review + approve → merge main
@@ -369,7 +369,7 @@ Repo: https://github.com/expr-lang/expr · used by: Aviasales, Argo CD, OctoLink
 
 ### 7.6.1 Architecture overview
 
-```
+```text
                   Write Path (Commands)              Read Path (Queries)
                   ─────────────────────              ──────────────────
 
@@ -506,7 +506,7 @@ Repo: https://github.com/expr-lang/expr · used by: Aviasales, Argo CD, OctoLink
 
 > Để đảm bảo "ghi DB + publish event" atomic, dùng Outbox table thay vì publish trực tiếp.
 
-```
+```text
 1. Service ghi business data + outbox row trong cùng MySQL transaction
                         ▼
 2. Transaction commit (atomic)
@@ -590,7 +590,7 @@ Debezium config sample (`debezium-connect-config.json`):
 
 Cho transactions span nhiều services (order creation + payment + dispatch), dùng Saga choreography (event-driven, no central orchestrator):
 
-```
+```text
 [order-svc] OrderCreated
             ▼
    [finance-svc] reserves payment
@@ -623,7 +623,7 @@ Saga state lưu ở mỗi service (no central state DB). Mỗi service biết ac
 - Decouple read traffic: dashboard không impact transactional MySQL
 
 **Sink architecture**:
-```
+```text
 Kafka topics
     ▼ (Kafka Connect: Elasticsearch Sink Connector)
     ▼
@@ -641,7 +641,7 @@ Elasticsearch indices:
 
 ### 7.6.10 Dead Letter Queue · DLQ
 
-```
+```text
 Topic: orders.events
   ▼ consumer (dispatch-engine)
   ▼ retry 3x with exponential backoff (1s, 5s, 30s)

@@ -635,7 +635,7 @@ WHERE sent_at BETWEEN <from> AND <to>;
 
 ### 10.6.1 Architecture diagram
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │                       WRITE SIDE (Commands)                     │
 │                                                                 │
@@ -779,7 +779,7 @@ Critical UX rule: **không hiển thị dashboard mà không có lag indicator**
 ### 10.6.5 Elasticsearch index design
 
 Daily rolling indices cho `orders`:
-```
+```text
 orders-2026-05-28   ← hot (today, write + read)
 orders-2026-05-27   ← hot (yesterday)
 orders-2026-05-26   ← warm (older, read-only)
@@ -829,7 +829,7 @@ ILM (Index Lifecycle Management):
 
 ### 10.6.6 Failover
 
-```
+```text
 Primary path:      Service → ES query
                               ▼ if ES down
 Fallback path:     Service → MySQL replica

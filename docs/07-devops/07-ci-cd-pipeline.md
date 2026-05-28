@@ -6,7 +6,7 @@
 
 ## 1. Pipeline overview
 
-```
+```text
 Code push (feature branch)
        │
        ▼
@@ -279,7 +279,7 @@ jobs:
 
 Repo `smp-gitops` (separate from service repos):
 
-```
+```text
 smp-gitops/
 ├── README.md
 ├── environments/
@@ -326,7 +326,7 @@ ENTRYPOINT ["/app/server"]
 
 Per service repo có `deployments/helm/`:
 
-```
+```text
 deployments/helm/order-svc/
 ├── Chart.yaml
 ├── values.yaml          # default values

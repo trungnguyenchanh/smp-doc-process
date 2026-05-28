@@ -7,7 +7,7 @@
 ## Cách viết user story
 
 Mỗi story dùng template:
-```
+```text
 Là <role>, tôi muốn <action> để <benefit>.
 ```
 

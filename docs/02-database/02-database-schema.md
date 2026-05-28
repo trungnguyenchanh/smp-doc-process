@@ -6,7 +6,7 @@
 
 ## 1. ERD overview · Core domain
 
-```
+```text
             ┌──────────────┐
             │  partners    │  v3.3
             └──────┬───────┘
@@ -982,7 +982,7 @@ func Translate(key, locale string) string {
 
 ## 9. Redis key patterns
 
-```
+```text
 agent:online:<agent_id>           SET (TTL 60s, heartbeat refresh)
 agent:location:<agent_id>         HASH { lat, lng, updated_at } (TTL 60s)
 dispatch:queue:<zone_code>        LIST (FIFO queue of pending orders)
@@ -1050,7 +1050,7 @@ Mỗi country/region 1 cluster MySQL độc lập. Áp dụng cho:
 - **US (US)**: CPRA + state-level laws. Cluster đặt tại Virginia (AWS us-east-1).
 - **EU (DE, FR, ...)**: GDPR cross-border restrictions. Cluster đặt tại Frankfurt (AWS eu-central-1).
 
-```
+```text
 ┌──────────────────────┐    ┌──────────────────────┐    ┌──────────────────────┐
 │  smp-asia cluster    │    │  smp-china cluster   │    │  smp-us cluster      │
 │  (Singapore region)  │    │  (Beijing region)    │    │  (Virginia region)   │
@@ -1111,7 +1111,7 @@ RPO < 5 minutes, RTO < 1 hour.
 
 Dùng [golang-migrate/migrate](https://github.com/golang-migrate/migrate):
 
-```
+```text
 migrations/
   smp_order/
     000001_init.up.sql

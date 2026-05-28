@@ -156,7 +156,7 @@ Searchable fields (vd search by CCCD):
 
 ### 4.1 Vault layout
 
-```
+```text
 secret/smp/<env>/
 ├── service-keys/
 │   ├── jwt-signing-private.pem
@@ -421,7 +421,7 @@ func (h *Handler) RunReconciliation(ctx context.Context) {
 
 ### 5.5.5 Tokenization vs Masking · Decision tree
 
-```
+```text
 Is the field used for:
 │
 ├─ Display only to certain roles?

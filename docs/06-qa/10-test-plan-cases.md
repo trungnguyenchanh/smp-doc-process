@@ -21,7 +21,7 @@
 ## 2. Test plan template (per release)
 
 ### 2.1 Header
-```
+```text
 Test Plan: SMP v3.3 Partner Platform
 Release date: 2026-06-15
 Test period: 2026-06-08 → 2026-06-14
@@ -85,7 +85,7 @@ OWASP Top 10 + specific scenarios (xem doc Security testing).
 
 ## 4. Test case template
 
-```
+```text
 TC-ID: TC-ORDER-001
 Title: Customer tạo đơn dịch vụ AC repair thành công
 Module: Order
@@ -315,7 +315,7 @@ export default function() {
 
 ## 12. Bug template
 
-```
+```text
 Bug ID: BUG-2026-1042
 Title: [Partner] Wallet topup fail with bank_transfer method
 

@@ -28,7 +28,7 @@ Mỗi rule có ID `BR-<category>-<num>` để reference từ user story, test ca
 
 ### Rule ID convention mới · v4.0
 
-```
+```text
 <country_code>.<category>.<num>
 ```
 
@@ -226,7 +226,7 @@ Nếu chưa biết level (lúc estimate trước khi assign): dùng `labor_price
 `material_variants.sell_price` do **SMP set**, **không** lấy từ wms cost. SMP control margin.
 
 ### BR-PRICE-003 · Quote subtotal
-```
+```text
 labor_subtotal = SUM(order_steps.labor_price)
 material_subtotal = SUM(order_step_materials.unit_price * quantity)
 survey_fee = service.survey_fee (default 80,000đ)
@@ -345,7 +345,7 @@ Khi tạo đơn `partner_customer`:
 ### BR-STAGE-001 · Allowed transitions
 Chỉ các transitions sau là valid (state machine):
 
-```
+```text
 01_created → 02_dispatched_survey (auto, sau khi payment OK)
 02_dispatched_survey → 03_survey_accepted (khi agent tap "Nhận")
 02_dispatched_survey → 02_dispatched_survey (round 2, 3)
@@ -484,7 +484,7 @@ Nếu partner có ≥ 5 active agents AND `customer_config.default_dispatch_visi
 
 ### BR-INT-002 · Webhook signature
 Mọi inbound webhook phải có HMAC SHA-256 signature trong header `X-Signature`:
-```
+```text
 signature = HMAC-SHA256(webhook_secret, raw_body)
 ```
 

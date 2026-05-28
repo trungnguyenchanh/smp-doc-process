@@ -29,7 +29,7 @@ Nếu thay đổi đáng kể (không phải typo):
 
 ### 4. Commit message
 Theo [Conventional Commits](https://www.conventionalcommits.org/):
-```
+```text
 docs(ba): cập nhật BR-DISP-003 timeout từ 60s → 45s
 
 - Sau khi load test, 45s đủ cho 95% case

@@ -29,7 +29,7 @@
 
 ### 3 bên tham gia
 
-```
+```text
        ┌─────────────┐
        │  CUSTOMER   │ Khách hàng cuối · đặt đơn qua mobile app
        │  (B2C)      │
@@ -99,7 +99,7 @@ Chi tiết RBAC scopes: xem [Doc 08 · Auth Spec](08-security/08-auth-spec.md).
 
 Hệ thống SMP chia thành **10 microservices**, mỗi service own 1 database, communicate qua REST + Event bus (Kafka).
 
-```
+```text
                     ┌──────────────────────┐
                     │   api-gateway        │ Routing, auth, rate limit
                     │   (Public entry)     │
@@ -266,7 +266,7 @@ Các khái niệm cốt lõi cần hiểu trước khi đọc các docs khác:
 | **Pool** | Gray | Standby, chưa assign |
 
 ### Order Lifecycle · 10 stages
-```
+```text
 01 created → 02 searching → 03 sur_assigned → 04 sur_arrived
 → 05 quoted → 06 approved → 07 exc_assigned → 08 exc_in_progress
 → 09 completed → 10 paid
@@ -363,7 +363,7 @@ Chi tiết Gherkin + Acceptance Criteria: xem [Doc 09 · User Stories](05-ba/09-
 
 ### Flow 1 · Customer Direct Order
 
-```
+```text
 [Customer mở app]
   ▼
 [Chọn service + slot + địa chỉ]
@@ -411,7 +411,7 @@ Tương tự Flow 1 nhưng:
 ### Flow 3 · Material Check trong Quote
 
 Khi SUR đang nhập báo giá:
-```
+```text
 SUR app · search material "Ống đồng"
   ▼
 catalog-svc · GET /materials?q=...
@@ -429,7 +429,7 @@ SUR chọn → nhập số lượng
 
 ### Flow 4 · Dispatch Round với Surge
 
-```
+```text
 order-svc emit OrderCreated event
   ▼
 dispatch-engine · pick up event
@@ -455,7 +455,7 @@ Round 5 (radius unlimited, surge 2.0x)
 
 ### Flow 5 · Partner Onboarding + KYC
 
-```
+```text
 Sales SMP đưa link onboarding cho partner
   ▼
 Partner Owner đăng ký · partner-svc · POST /partners
