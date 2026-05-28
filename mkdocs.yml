@@ -1,0 +1,140 @@
+site_name: SMP Documentation
+site_description: Service Marketplace Platform · Process Documentation v3.4
+site_author: SMP Engineering Team
+site_url: https://docs.smp.vn
+
+# Repository
+repo_name: trungnguyenchanh/smp-doc-process
+repo_url: https://github.com/trungnguyenchanh/smp-doc-process
+edit_uri: edit/main/
+
+# Theme
+theme:
+  name: material
+  language: vi
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.path
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - search.share
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+    - content.action.edit
+    - toc.follow
+  palette:
+    # Light mode
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Plus Jakarta Sans
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
+    logo: material/library
+
+# Plugins
+plugins:
+  - search:
+      lang:
+        - vi
+        - en
+  - git-revision-date-localized:
+      enable_creation_date: true
+      type: date
+
+# Extensions
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 4
+  - pymdownx.arithmatex:
+      generic: true
+  - pymdownx.betterem
+  - pymdownx.caret
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.smartsymbols
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.tilde
+
+# Navigation
+nav:
+  - Tổng quan:
+      - Home: index.md
+      - System Overview: 00-system-functional-overview.md
+      - Migration Plan v4.0: MIGRATION-PLAN-v4.md
+      - Contributing: CONTRIBUTING.md
+      - Deploy Guide: DEPLOY-GUIDE.md
+  - 🏛️ Architecture:
+      - 01-architecture/01-architecture.md
+  - 🗄️ Database:
+      - 02-database/02-database-schema.md
+  - ⚙️ Backend:
+      - API Contract: 03-backend/03-api-contract.md
+      - Coding Standards: 03-backend/04-coding-standards-and-dev-setup.md
+  - 📊 BA:
+      - Glossary: 05-ba/05-glossary.md
+      - User Stories: 05-ba/09-user-stories.md
+      - KPI Metrics: 05-ba/14-kpi-metrics-definition.md
+      - Business Rules: 05-ba/15-business-rules.md
+  - 🧪 QA:
+      - Test Plan + Cases: 06-qa/10-test-plan-cases.md
+  - 🚀 DevOps:
+      - Environment Matrix: 07-devops/06-environment-matrix.md
+      - CI/CD Pipeline: 07-devops/07-ci-cd-pipeline.md
+      - Runbook Incidents: 07-devops/11-runbook-incidents.md
+  - 🔒 Security:
+      - Auth Spec: 08-security/08-auth-spec.md
+      - Audit Log: 08-security/12-audit-log-spec.md
+      - Data Classification: 08-security/13-data-classification-encryption.md
+
+# Extra
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/trungnguyenchanh/smp-doc-process
+  generator: false
+
+copyright: Copyright &copy; 2026 SMP Team · Internal Use Only
