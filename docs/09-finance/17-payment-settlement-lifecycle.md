@@ -91,7 +91,47 @@ ORDER lifecycle (customer-facing, 10-stage) tách khỏi SETTLEMENT lifecycle (m
 ## 8. Edge cases (giữ + bổ sung)
 Webhook 2 lần → idempotent theo `gateway_ref`. COD collected quá SLA không remit → freeze toàn bộ payout thợ. Gateway settle về bank trễ → `Dr cash_bank/Cr cash_gateway`, không đổi state.
 
+### 8.1 Multi-agent step settlement (v3.5+)
+
+Settlement vẫn ở order-level (1 settlement = 1 order), KHÔNG split theo step. Tuy nhiên commission distribution thì split theo step + agent ([Doc 16 §3.5](./16-finance-ledger-spec.md)).
+
+Order completed flow:
+1. Last step `order_step.status → completed` triggers `StepEarningsCalculated` event (Doc 18)
+2. Each step posts N journal lines (1 per agent involved)
+3. Order-level settlement transitions `SETTLED` chỉ khi TẤT CẢ steps completed
+4. Order-level events (`OrderSettled`) emit sau khi tất cả step journals posted
+
+Edge: nếu step bị revert (vd customer dispute step 3 sau khi đã completed):
+- Reverse journal entries cho step đó (Dr agent_payable → Cr revenue_commission)
+- Order settlement state KHÔNG quay về `INIT`, giữ ở current state cho đến khi dispute resolved
+- Final state determined sau dispute resolution
+
+### 8.2 Warranty package settlement (v3.5+)
+
+**Hai loại settlements khác nhau hoàn toàn:**
+
+#### A. Settlement cho purchase order (KH mua gói)
+
+Order O-001 sale gói 1,200,000 VND:
+- Lifecycle: INIT → PENDING_GATEWAY → SETTLED (như order thường)
+- Khi SETTLED: post journal **deferred_revenue** (xem [Doc 16 §3.6.2](./16-finance-ledger-spec.md))
+- KHÔNG recognize revenue commission ngay
+- Tách biệt với revenue recognition cron sau này
+
+#### B. Settlement cho warranty claim order (free-of-charge)
+
+Order O-050 from claim (`is_warranty_order=TRUE, amount_charged=0`):
+- Lifecycle ngắn hơn: skip PAYMENT states (no money from customer)
+- INIT → IN_PROGRESS → SETTLED (khi step completed)
+- Khi SETTLED: post journal `warranty_service_cost / agent_payable` (Doc 16 §3.6.4)
+- KHÔNG touch deferred_revenue (continues per monthly cron)
+- KHÔNG touch customer_wallet
+
+Edge: nếu claim cancelled trước khi order completed → revert quota (BR-WPKG-006) + cancel order without journal.
+
 ## 9. Changelog
 | Version | Date | Changes |
 | --- | --- | --- |
+| 1.4 | 2026-05-29 | Add §8.2 warranty package settlement (purchase + claim) |
+| 1.3 | 2026-05-29 | Add §8.1 multi-agent step settlement edge case |
 | 1.2 | 2026-05-28 | Option A matrix (COD_PENDING có đường vào); thời điểm tạo settlement theo method; VOIDED làm rõ; ledger↔settlement SoT; COD-refund-before-remit |

@@ -81,6 +81,16 @@
 | `WarrantyIssued` | quality | notification | order_id | Gửi chứng nhận BH |
 | `PayoutPaid` | finance | notification, agent(earnings_mv) | agent_id | Cập nhật dashboard thu nhập |
 | `SosTriggered` | quality | ops(alert), notification | order_id | Cảnh báo Ops 24/7 |
+| `StepAgentAssigned` | dispatch | agent(notification), audit | order_step_id | Thợ được assign vào step (v3.5+) |
+| `StepLeadAccepted` | dispatch | finance, agent, audit | order_step_id | Lead accept step → unlock helper invitations (v3.5+) |
+| `StepSplitOverridden` | dispatch | finance, audit | order_step_id | Lead override split_bps cho helper (v3.5+) |
+| `StepEarningsCalculated` | finance | agent(earnings_mv), notification | order_step_id | Tính & post earnings cho N agents (v3.5+) |
+| `WarrantyPackagePurchased` | warranty | finance, notification | customer_warranty_id | KH mua gói BH · trigger deferred revenue posting (v3.5+) |
+| `WarrantyClaimOpened` | warranty | ops(approval queue), agent, notification | warranty_claim_id | KH yêu cầu claim · cần quota check + Ops approval cho repair (v3.5+) |
+| `WarrantyClaimApproved` | warranty | order(create free order), agent(notification) | warranty_claim_id | Claim approved · tạo order với amount=0 (v3.5+) |
+| `WarrantyRevenueRecognized` | warranty | finance, audit | customer_warranty_id | Monthly cron post journal: deferred → revenue (v3.5+) |
+| `WarrantyPackageExpired` | warranty | notification, finance | customer_warranty_id | Gói hết hạn · residual revenue recognized · suggest renew (v3.5+) |
+| `MaintenanceScheduled` | warranty | notification, customer | customer_warranty_id | Auto-suggest KH đặt lịch vệ sinh định kỳ (v3.5+) |
 
 ## 4. Payload contract (core finance events)
 
@@ -123,6 +133,63 @@ Consumers: **loyalty** → clawback nếu earn confirmed / hủy nếu pending; 
   "category":"...", "opened_at":"..." }
 ```
 Consumer: **finance/payout** → set earnings `on_hold` cho `agent_id` trên `order_id`.
+
+### `StepAgentAssigned` v1.0 (v3.5+)
+```jsonc
+{
+  "order_step_id": "ostep_123", "order_id": "order_456",
+  "agent_id": "agent_789", "role": "lead|helper|specialist",
+  "specialty": "electrician",                    // null nếu role=lead/helper generic
+  "split_bps": 7000,                              // effective split (default or override)
+  "is_override": false,
+  "assigned_by": "agent_999",                     // ai assigned (lead or dispatch-svc)
+  "assigned_at": "2026-06-15T03:00:00Z"
+}
+```
+Consumers: **agent** → push notification mời thợ; **audit** → log assignment trail.
+
+### `StepLeadAccepted` v1.0 (v3.5+)
+```jsonc
+{
+  "order_step_id": "ostep_123", "order_id": "order_456",
+  "lead_agent_id": "agent_789",
+  "accepted_at": "2026-06-15T03:30:00Z",
+  "helpers_invitation_deadline": "2026-06-15T05:30:00Z"  // BR-MA-007 · 2h SLA
+}
+```
+Consumers: **finance** → mark step ready for in_progress; **agent** → enable lead UI để invite helpers; **audit** → state change.
+
+### `StepSplitOverridden` v1.0 (v3.5+)
+```jsonc
+{
+  "order_step_id": "ostep_123", "order_id": "order_456",
+  "overridden_by": "agent_lead_id",
+  "changes": [
+    { "agent_id": "agent_helper_X", "old_split_bps": 3000, "new_split_bps": 2000 },
+    { "agent_id": "agent_helper_Y", "old_split_bps": 0,    "new_split_bps": 1000 }  // added
+  ],
+  "overridden_at": "2026-06-15T04:00:00Z",
+  "reason": "added second helper"                  // free text optional
+}
+```
+Consumers: **finance** → validate SUM still = 10000; **audit** → log full diff for compliance.
+
+### `StepEarningsCalculated` v1.0 (v3.5+)
+```jsonc
+{
+  "order_step_id": "ostep_123", "order_id": "order_456",
+  "step_revenue_minor": 300000, "currency": "VND",
+  "step_commission_minor": 45000,
+  "agents": [
+    { "agent_id": "agent_A", "role": "lead",       "split_bps": 4000, "amount_earned_minor": 18001 },  // lead absorbs +1 residual
+    { "agent_id": "agent_C", "role": "specialist", "split_bps": 4000, "amount_earned_minor": 17999 },
+    { "agent_id": "agent_D", "role": "helper",     "split_bps": 2000, "amount_earned_minor":  9000 }
+  ],
+  "journal_entry_id": "je_888",                    // ref to journal_entries.id
+  "calculated_at": "2026-06-15T10:00:00Z"
+}
+```
+Consumers: **agent(earnings_mv)** → update materialized view; **notification** → push "Bạn đã nhận X VND từ step Y"; **audit** → trail full split.
 
 ## 5. Outbox + DLQ data model
 

@@ -855,6 +855,163 @@ Auto-suspend partner nếu:
 
 ---
 
+## Q · Multi-Agent Step Assignment Rules (v3.5+ DRAFT)
+
+> Rules cho cơ chế **nhiều thợ tham gia 1 step** với role (lead/helper/specialist) và split ratio riêng. Schema xem [Doc 02 §7.7](../02-database/02-database-schema.md). Calc xem [Doc 04 §1.15.3](../03-backend/04-coding-standards-and-dev-setup.md). Journal templates xem [Doc 16 §3.5](../09-finance/16-finance-ledger-spec.md).
+
+### BR-MA-001 · Service step template required
+- Mỗi `service` MUST có ≥ 1 row trong `service_steps`
+- SUM(`default_step_weight_bps`) per service_id MUST = 10000 (100%)
+- Validation: app-level check trước INSERT/UPDATE service
+- Exception: service archived → skip validation
+
+### BR-MA-002 · Step exactly 1 lead
+- Mỗi `order_step` MUST có exactly 1 `order_step_agents` row với `role='lead'`
+- Helpers/specialists chỉ assign được AFTER lead đã accept
+- Transition gate: `order_step.status` không thể chuyển sang `in_progress` nếu chưa có lead
+- Audit: emit event `StepLeadAssigned` khi lead đầu tiên accept
+
+### BR-MA-003 · Split bps sum = 10000
+- Trong 1 `order_step`, SUM(`order_step_agents.split_bps`) MUST = 10000 (100%)
+- Validation: app-level function `ValidateAgentSplits()` (Doc 04 §1.15.3)
+- Transition gate: `order_step.status` không thể chuyển sang `completed` nếu sum ≠ 10000
+- Recovery: nếu detect drift trong production → block step + alert Ops
+
+### BR-MA-004 · Lead override permission
+- Chỉ agent có `role='lead'` của step đó được override `split_bps` cho helpers/specialists
+- Override constraint: KHÔNG được giảm split của agent đã `status='accepted'` (chỉ tăng được)
+- Override audit: log với `override_by` + `override_at_utc` + before/after split
+- Audit event: `StepSplitOverridden` (xem [Doc 18](../09-finance/18-event-catalog.md))
+- Time window: override allowed cho đến khi step.status = 'completed'. Sau đó immutable.
+
+### BR-MA-005 · Earnings calculation per step
+- Khi `order_step.status` → `completed`:
+  1. Compute `step_revenue = order.total × order_step.step_weight_bps / 10000`
+  2. For each agent in step: `amount_earned = step_revenue × agent.split_bps / 10000`
+  3. Lead absorbs residual rounding (Doc 04 §1.15.3 SplitStepRevenue function)
+  4. Post journal entries (Doc 16 §3.5): `Dr revenue_commission | Cr agent_payable[agent_id]` per agent
+  5. Emit event `StepEarningsCalculated` (Doc 18)
+- Idempotency: nếu retry, check `amount_earned IS NOT NULL` → skip
+- Error: nếu step.status đảo về `in_progress` (revert) → MUST reverse journal entries trước
+
+### BR-MA-006 · Warranty liability = primary_lead only
+- `orders.primary_lead_agent_id` = lead của step quan trọng nhất (configurable per service, default = step có weight cao nhất)
+- Khi warranty triggered (BR-WARRANTY-002):
+  - Cost recovery TỪ `agent_payable[primary_lead_agent_id]` (theo BR-WARRANTY-004)
+  - Helpers/specialists KHÔNG bị trừ earnings
+  - Helpers KHÔNG ảnh hưởng KPI strike count
+- Exception: nếu warranty cause là **material defect** → vendor liability (không touch agent)
+- Exception: nếu warranty cause là **specialist's specific work fault** (vd electrician lỗi đấu điện) → Ops Manager có thể manual reroute liability sang specialist đó (case-by-case + audit log required)
+- Exception: primary_lead retired → `service_guarantee_reserve` gánh
+
+### BR-MA-007 · Step assignment SLA
+- After lead accepted, lead có **2 giờ** để invite helpers/specialists (nếu service template min_required > 1)
+- Sau 2 giờ → escalate Ops queue + dispatch-svc auto-suggest helpers từ pool
+- Helpers có **30 phút** để accept hoặc reject invitation
+- Sau 30 phút không accept → auto-reject + dispatch-svc try next helper
+
+### BR-MA-008 · Rejection cascade
+- Nếu lead reject step → toàn bộ step bị reassign (cả helpers cũng bị cancel)
+- Nếu helper reject → lead nhận notification + invite helper khác (step không bị cancel)
+- Nếu specialist (skill cụ thể) reject → block step đến khi có specialist khác accept
+- Reject reasons trackable: `too_far`, `not_available`, `wrong_skill`, `personal_reason`, `other`
+
+### BR-MA-009 · COD with multi-agent
+- COD collection: chỉ **primary_lead** được collect cash từ customer
+- Helpers/specialists KHÔNG được collect (audit risk)
+- Remit: primary_lead remit toàn bộ, sau đó SMP distribute earnings qua wallet
+- Liability: nếu primary_lead shortfall (BR-COD-004) → tất cả earnings của step đó bị hold đến khi resolve
+
+### BR-MA-010 · Reporting visibility
+- Mỗi agent (lead, helper, specialist) đều thấy earnings của mình per step trong app
+- Lead thêm view: tổng earnings của cả team trong step đó (transparency)
+- Helpers KHÔNG thấy split của lead (privacy · chỉ thấy của mình)
+- Admin Web: full visibility cho tất cả splits + override history
+
+---
+
+## R · Warranty Package (Maintenance Subscription) Rules (v3.5+ DRAFT)
+
+> Rules cho gói bảo hành **mua riêng** (subscription), khác với warranty embedded khi order completed (Section L). Schema [Doc 02 §7.8](../02-database/02-database-schema.md), accounting [Doc 16 §3.6](../09-finance/16-finance-ledger-spec.md), policy [Doc 19](../10-legal/19-service-guarantee-policy.md).
+
+### BR-WPKG-001 · 1 gói = 1 thiết bị
+- Mỗi `customer_warranties` row MUST link tới exactly 1 `customer_devices.id`
+- KH có nhiều thiết bị muốn cover → mua nhiều gói riêng
+- Exception: gói "multi-device" sẽ design ở v3.7+ nếu có market demand
+
+### BR-WPKG-002 · Active warranty constraint
+- KH KHÔNG được mua thêm gói cùng loại cho 1 thiết bị đang còn active warranty
+- Validation: trước khi sale, check `SELECT FROM customer_warranties WHERE device_id=X AND status='active' AND package.device_category=Y`
+- Exception: cho phép "upgrade" · cancel gói cũ refund proportional + sale gói mới
+
+### BR-WPKG-003 · Cooling-off period (refund full)
+- Trong **7 ngày đầu** từ `start_date_utc`, KH cancel được refund 100% (no questions asked)
+- Sau 7 ngày, refund tính theo proportional remaining months
+- Audit: log `cancelled_reason` + refund_amount
+- Per VN Consumer Protection Law 2010 Article 9 + cooling off practice
+
+### BR-WPKG-004 · Quota check before claim
+- Khi KH yêu cầu claim, system validate:
+  - `customer_warranties.status = 'active'`
+  - `customer_warranties.end_date_utc > NOW()`
+  - `warranty_quota_balance.count_remaining > 0` cho `quota_type` tương ứng
+  - `warranty_quota_balance.next_eligible_at_utc <= NOW()` (per `count_per_period` rule)
+- Nếu fail bất kỳ check → reject claim với reason cụ thể
+- Cho `claim_type='repair_basic'`: additional check `issue_category IN warranty_package_covered_issues`
+
+### BR-WPKG-005 · Covered repairs = whitelist
+- Repair claim MUST có `issue_category` matching 1 row trong `warranty_package_covered_issues` cho gói đó
+- Nếu issue KHÔNG trong whitelist → reject với suggestion "đặt order trả phí thông thường"
+- Common covered issues:
+  - AC: `capacitor`, `gas_refill_partial`, `fan_motor`, `drainage`, `thermostat`
+  - Washer: `belt_replacement`, `drainage_pump`, `door_seal`
+  - Fridge: `gasket`, `thermostat`, `defrost_heater`
+- Non-covered (require paid order): `compressor_replacement`, `coil_replacement`, full unit replacement
+
+### BR-WPKG-006 · Claim approval flow
+- **Auto-approve**: claims cho `quota_type='cleaning'` với valid quota → auto approve
+- **Manual review**: claims cho `quota_type='repair_basic/full'` → require Ops Admin approval (5-min SLA)
+- After approval → tạo order với `is_warranty_order=TRUE`, `amount_charged=0`, `warranty_claim_id=X`
+- Decrement quota count IMMEDIATELY upon approval (not on completion · prevent abuse)
+- If claim cancelled before order completion → restore quota count
+
+### BR-WPKG-007 · Auto-suggest maintenance scheduling
+- For each active warranty với `auto_suggest=TRUE`:
+  - Cron daily check: nếu `warranty_quota_balance.last_used_at_utc + suggest_interval_days < NOW()` AND quota còn → emit suggestion
+- Notification: "Đã 3 tháng từ lần vệ sinh máy lạnh gần nhất. Đặt lịch ngay?"
+- KH có thể opt-out auto-suggest per gói
+
+### BR-WPKG-008 · Multi-agent applies to warranty orders
+- Warranty orders (`is_warranty_order=TRUE`) vẫn dùng multi-agent step assignment (Section Q rules)
+- Agent earnings tính bình thường (lead + helpers + specialists)
+- Cost ghi vào `warranty_service_cost` thay vì `revenue_commission`
+
+### BR-WPKG-009 · Liability cho warranty claim
+- Theo BR-MA-006: primary_lead chịu re-service nếu work lỗi
+- Cost của re-service = từ `service_guarantee_reserve` (vẫn áp dụng dù là warranty order)
+- KH KHÔNG bị charge re-service (đã trả tiền gói rồi)
+
+### BR-WPKG-010 · Expiry handling
+- Cron daily 03:00 UTC: check `customer_warranties WHERE end_date_utc < NOW() AND status='active'`
+- Action:
+  - Status → `expired`
+  - Notify KH "Gói BH đã hết hạn. Renew?"
+  - Trigger residual revenue recognition (Doc 16 §3.6.6)
+  - Forfeit unused quotas (per terms: không cumulate vào gói mới)
+
+### BR-WPKG-011 · Renewal flow
+- 7 ngày trước `end_date_utc` → notify KH renewal option
+- Renewal price: same as current price (or new pricing if package updated)
+- KH renew → tạo new `customer_warranties` row với `start_date_utc = old.end_date_utc + 1 day`
+- Loyalty bonus: KH renew on-time có thể được 10% off (Founder decision, configurable)
+
+### BR-WPKG-012 · Quota carry-over
+- Default: KHÔNG carry-over unused quotas khi expire
+- Exception: nếu KH renew TRONG cooling-off period của gói cũ → option carry-over 50% unused quota
+- Audit log mọi carry-over decisions
+
+---
+
 ## Appendix · Full `rules_engine.yaml` sample (v4.0 preview)
 
 > Phần này là **preview** cho v4.0 rules engine. Convert sample chỉ cho 2 categories Dispatch + Pricing. Các categories còn lại (Payment, KYC, Stage, Material, Partner, Integration, Quality, Notification, Retention) sẽ convert tương tự khi v3.6.

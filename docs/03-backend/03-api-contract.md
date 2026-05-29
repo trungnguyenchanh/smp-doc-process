@@ -150,6 +150,364 @@ Transit stage. Vd: `POST /orders/ord_X/transitions/05_surveyed`
 
 Auth check: agent gắn vào order mới được transit.
 
+### Multi-agent step endpoints (v3.5+)
+
+> Endpoints cho cơ chế nhiều thợ tham gia 1 step với role + split ratio. Schema [Doc 02 §7.7](../02-database/02-database-schema.md), rules [Doc 15 Section Q](../05-ba/15-business-rules.md).
+
+#### GET /orders/{order_id}/steps
+List all steps in order with current agents + splits.
+
+Response:
+```jsonc
+{
+  "data": [
+    {
+      "order_step_id": "ostep_123",
+      "step_no": 3,
+      "step_name": "Lắp đặt",
+      "step_weight_bps": 3000,
+      "step_revenue_minor": 300000,
+      "status": "in_progress",
+      "lead_agent_id": "agent_A",
+      "agents": [
+        {"agent_id": "agent_A", "role": "lead", "split_bps": 4000, "is_override": true, "status": "in_progress"},
+        {"agent_id": "agent_C", "role": "specialist", "specialty": "electrician", "split_bps": 4000, "is_override": false, "status": "accepted"},
+        {"agent_id": "agent_D", "role": "helper", "split_bps": 2000, "is_override": true, "status": "assigned"}
+      ]
+    }
+  ]
+}
+```
+
+#### POST /orders/{order_id}/steps/{step_no}/agents
+Lead assign helper/specialist to step.
+
+Auth: caller MUST be lead of this step (BR-MA-004).
+
+Body:
+```jsonc
+{
+  "agent_id": "agent_D",
+  "role": "helper",                  // helper | specialist
+  "specialty": null,                  // optional · for specialist
+  "split_bps": 2000                   // proposed split
+}
+```
+
+Validation:
+- Lead exists for step
+- agent_id not already on step
+- SUM(all splits including new) MUST = 10000 → if not, MUST also include `splits_adjustment` array
+
+Body với adjustment (rebalance other splits):
+```jsonc
+{
+  "agent_id": "agent_D",
+  "role": "helper",
+  "split_bps": 2000,
+  "splits_adjustment": [
+    {"agent_id": "agent_A", "new_split_bps": 4000},   // lead reduces from 5000
+    {"agent_id": "agent_C", "new_split_bps": 4000}    // specialist reduces from 5000
+  ]
+}
+```
+
+Response: 201 Created with full step state.
+
+#### DELETE /orders/{order_id}/steps/{step_no}/agents/{agent_id}
+Lead remove helper/specialist from step.
+
+Auth: caller MUST be lead.
+
+Constraints:
+- Cannot remove lead (BR-MA-002)
+- Cannot remove agent với `status='in_progress'` hoặc `status='completed'`
+- After remove, MUST provide `splits_adjustment` to keep SUM = 10000
+
+Body:
+```jsonc
+{
+  "splits_adjustment": [
+    {"agent_id": "agent_A", "new_split_bps": 6000},   // lead absorbs back
+    {"agent_id": "agent_C", "new_split_bps": 4000}
+  ]
+}
+```
+
+#### PATCH /orders/{order_id}/steps/{step_no}/splits
+Lead override split_bps for multiple agents at once (atomic).
+
+Auth: caller MUST be lead.
+
+Body:
+```jsonc
+{
+  "splits": [
+    {"agent_id": "agent_A", "new_split_bps": 5000},
+    {"agent_id": "agent_C", "new_split_bps": 3000},
+    {"agent_id": "agent_D", "new_split_bps": 2000}
+  ],
+  "reason": "specialist's work was simpler than expected"
+}
+```
+
+Validation:
+- Caller is lead
+- SUM of new splits = 10000
+- No agent currently `status='completed'`
+
+Emit event: `StepSplitOverridden` (Doc 18).
+
+#### POST /agents/me/step-invitations/{order_step_id}/accept
+Helper/specialist accept invitation to step.
+
+Response: 200 OK with step + lead info.
+
+#### POST /agents/me/step-invitations/{order_step_id}/reject
+Helper/specialist reject invitation.
+
+Body: `{"reason": "too_far|not_available|wrong_skill|personal_reason|other", "notes": "..."}`
+
+Cascade: if reject → dispatch-svc auto-try next helper (BR-MA-008).
+
+#### GET /agents/me/earnings?period=...
+Agent's earnings breakdown per step (NEW v3.5+ shape).
+
+Response:
+```jsonc
+{
+  "data": [
+    {
+      "order_id": "order_456",
+      "order_step_id": "ostep_123",
+      "step_no": 3,
+      "role": "lead",
+      "split_bps": 4000,
+      "step_revenue_minor": 300000,
+      "amount_earned_minor": 120000,
+      "currency": "VND",
+      "step_completed_at": "2026-06-15T10:00:00Z"
+    }
+  ],
+  "summary": {
+    "total_earned_minor": 850000,
+    "by_role": {"lead": 600000, "helper": 150000, "specialist": 100000}
+  }
+}
+```
+
+### Warranty package endpoints (v3.5+)
+
+> Endpoints cho maintenance subscription packages. Schema [Doc 02 §7.8](../02-database/02-database-schema.md), rules [Doc 15 Section R](../05-ba/15-business-rules.md).
+
+#### GET /catalog/warranty-packages
+List available packages (public + cached 5 min).
+
+Query: `?device_category=ac&duration_months=12`
+
+Response:
+```jsonc
+{
+  "data": [
+    {
+      "package_code": "wpkg_ac_basic_1y",
+      "name": "Bảo trì máy lạnh cơ bản 1 năm",
+      "device_category": "ac",
+      "duration_months": 12,
+      "price_minor": 1200000,
+      "currency": "VND",
+      "marketing_tag": "best_seller",
+      "quotas": [
+        {"type": "cleaning", "count_total": 4, "service_code": "svc_ac_periodic_clean"},
+        {"type": "repair_basic", "count_total": 4}
+      ],
+      "covered_issues": [
+        {"category": "capacitor", "name": "Tụ điện máy lạnh", "max_value_minor": 300000},
+        {"category": "gas_refill_partial", "name": "Nạp gas bổ sung", "max_value_minor": 500000}
+      ]
+    }
+  ]
+}
+```
+
+#### GET /customers/me/devices
+List customer's registered devices.
+
+Response:
+```jsonc
+{
+  "data": [
+    {"id": "dev_101", "device_category": "ac", "brand": "Daikin", "model": "FTKZ25", "install_location": "Phòng khách"},
+    {"id": "dev_102", "device_category": "ac", "brand": "Panasonic", "install_location": "Phòng ngủ chính"}
+  ]
+}
+```
+
+#### POST /customers/me/devices
+Add a new device to customer profile.
+
+Body:
+```jsonc
+{
+  "device_category": "ac",
+  "brand": "Daikin",
+  "model": "FTKZ25NVMV",
+  "serial_no": "DKZ-2024-12345",
+  "install_date": "2024-03-15",
+  "install_location": "Phòng khách tầng 1"
+}
+```
+
+#### POST /customers/me/warranty-packages/purchase
+Purchase a warranty package for a device.
+
+Auth: customer  
+Body:
+```jsonc
+{
+  "package_code": "wpkg_ac_basic_1y",
+  "device_id": "dev_101",
+  "payment_method": "gateway",   // gateway | wallet
+  "agreed_to_terms": true,
+  "idempotency_key": "purchase_xyz_123"
+}
+```
+
+Validation:
+- Device exists and belongs to customer
+- No active warranty of same package for this device (BR-WPKG-002)
+- Customer agreed to terms
+
+Response 201:
+```jsonc
+{
+  "customer_warranty_id": "cw_456",
+  "purchase_order_id": "ord_789",
+  "start_date": "2026-06-15",
+  "end_date": "2027-06-15",
+  "amount_minor": 1200000,
+  "payment_status": "pending",   // wait for gateway confirmation
+  "quotas": [
+    {"type": "cleaning", "remaining": 4, "total": 4},
+    {"type": "repair_basic", "remaining": 4, "total": 4}
+  ]
+}
+```
+
+#### GET /customers/me/warranties
+List customer's active warranties.
+
+Response:
+```jsonc
+{
+  "data": [
+    {
+      "id": "cw_456",
+      "package_name": "Bảo trì máy lạnh cơ bản 1 năm",
+      "device": {"id": "dev_101", "category": "ac", "brand": "Daikin", "location": "Phòng khách"},
+      "status": "active",
+      "start_date": "2026-06-15",
+      "end_date": "2027-06-15",
+      "days_remaining": 280,
+      "quotas": [
+        {"type": "cleaning", "remaining": 3, "total": 4, "next_eligible_at": "2026-09-15"},
+        {"type": "repair_basic", "remaining": 4, "total": 4}
+      ]
+    }
+  ]
+}
+```
+
+#### POST /customers/me/warranties/{warranty_id}/claims
+Open a claim against active warranty.
+
+Auth: customer  
+Body cho cleaning claim:
+```jsonc
+{
+  "claim_type": "cleaning",
+  "service_code": "svc_ac_periodic_clean",
+  "scheduled_date": "2026-07-15",
+  "scheduled_time_window": "morning",
+  "notes": "Vệ sinh định kỳ lần 2"
+}
+```
+
+Body cho repair claim:
+```jsonc
+{
+  "claim_type": "repair_basic",
+  "issue_category": "capacitor",
+  "issue_description": "Máy lạnh không khởi động, nghi tụ điện hỏng",
+  "photos": ["url_1", "url_2"],
+  "preferred_visit_date": "2026-07-15",
+  "preferred_time_window": "afternoon"
+}
+```
+
+Validation per BR-WPKG-004:
+- Warranty active + not expired
+- Quota count > 0 for `claim_type`
+- For repair: `issue_category` in package's covered_issues
+- Next eligible date check (per `count_per_period`)
+
+Response 201:
+```jsonc
+{
+  "claim_id": "wc_789",
+  "status": "pending",          // cleaning auto-approve; repair needs Ops approval
+  "auto_approved": false,
+  "expected_review_time": "2026-07-14T08:00:00Z"
+}
+```
+
+#### GET /customers/me/warranties/{warranty_id}/claims
+List claims for a warranty (history).
+
+#### POST /customers/me/warranties/{warranty_id}/cancel
+Cancel warranty (refund flow).
+
+Body:
+```jsonc
+{
+  "reason": "không hài lòng dịch vụ",
+  "confirm_terms_understood": true   // user acknowledged refund policy
+}
+```
+
+Logic:
+- If within 7 days from start_date → refund 100% (BR-WPKG-003)
+- Else → refund proportional remaining months
+- Response includes refund_amount + estimated arrival time
+
+#### POST /customers/me/warranties/{warranty_id}/renew
+Renew warranty for new period.
+
+Body:
+```jsonc
+{
+  "payment_method": "gateway",
+  "apply_loyalty_discount": true   // 10% off if eligible
+}
+```
+
+#### Ops Admin endpoints (Admin Web)
+
+##### GET /admin/warranty-claims?status=pending
+Pending claims awaiting Ops approval.
+
+##### POST /admin/warranty-claims/{claim_id}/approve
+Approve a repair claim.
+
+Body: `{"notes": "Issue confirmed valid"}`
+
+Logic: creates free order with `is_warranty_order=TRUE, amount_charged=0, warranty_claim_id=X`.
+
+##### POST /admin/warranty-claims/{claim_id}/reject
+Reject claim with reason.
+
+Body: `{"reason": "Issue category not covered (compressor replacement)", "suggest_paid_order": true}`
+
 ## 5. Catalog endpoints (public · cached)
 
 ### GET /catalog/services

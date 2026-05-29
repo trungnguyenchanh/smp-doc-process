@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMP Multi-Agent UX Mockup · v3.5+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --indigo: #4F46E5;
+  --indigo-dark: #3730A3;
+  --indigo-light: #E0E7FF;
+  --green: #10B981;
+  --green-light: #D1FAE5;
+  --orange: #F59E0B;
+  --orange-light: #FEF3C7;
+  --red: #EF4444;
+  --red-light: #FEE2E2;
+  --cyan: #06B6D4;
+  --cyan-light: #CFFAFE;
+  --gray-900: #111827;
+  --gray-700: #374151;
+  --gray-500: #6B7280;
+  --gray-300: #D1D5DB;
+  --gray-100: #F3F4F6;
+  --gray-50:  #F9FAFB;
+  --white: #FFFFFF;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: linear-gradient(135deg, #f5f7fb 0%, #e8edf5 100%);
+  min-height: 100vh;
+  color: var(--gray-900);
+  padding: 32px 16px;
+}
+.page-header {
+  max-width: 1400px;
+  margin: 0 auto 32px;
+  text-align: center;
+}
+.page-header h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--indigo);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+.page-header p {
+  color: var(--gray-500);
+  font-size: 14px;
+}
+.controls {
+  max-width: 1400px;
+  margin: 0 auto 32px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 12px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.tab-btn {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--gray-100);
+  color: var(--gray-700);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.tab-btn:hover { background: var(--indigo-light); color: var(--indigo); }
+.tab-btn.active {
+  background: var(--indigo);
+  color: white;
+  box-shadow: 0 2px 8px rgba(79,70,229,0.3);
+}
+
+.phones-grid {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 32px;
+  justify-items: center;
+}
+
+.phone {
+  width: 340px;
+  background: var(--gray-900);
+  border-radius: 40px;
+  padding: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.12);
+  position: relative;
+}
+.phone-screen {
+  background: white;
+  border-radius: 32px;
+  overflow: hidden;
+  height: 680px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Status bar */
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 24px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+/* Header */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.app-header .back {
+  background: none; border: none;
+  font-size: 20px; cursor: pointer;
+  color: var(--gray-700);
+  padding: 4px 8px;
+}
+.app-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  flex: 1;
+  text-align: center;
+}
+.app-header .info {
+  background: none; border: none;
+  font-size: 16px; cursor: pointer;
+  color: var(--gray-500);
+}
+
+/* Content area */
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.content::-webkit-scrollbar { display: none; }
+
+.order-meta {
+  margin-bottom: 16px;
+}
+.order-meta .label { font-size: 11px; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.5px; }
+.order-meta .value { font-size: 14px; font-weight: 600; color: var(--gray-900); margin: 4px 0; }
+
+.section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  font-weight: 600;
+  margin: 16px 0 8px;
+}
+
+.divider {
+  height: 1px; background: var(--gray-100);
+  margin: 16px 0;
+}
+
+.revenue-card {
+  background: linear-gradient(135deg, var(--indigo) 0%, var(--indigo-dark) 100%);
+  color: white;
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 12px;
+}
+.revenue-card .small { font-size: 11px; opacity: 0.85; }
+.revenue-card .big {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 4px 0;
+  font-family: 'JetBrains Mono', monospace;
+}
+.revenue-card .small-bottom { font-size: 12px; opacity: 0.9; }
+
+.agent-card {
+  border: 1px solid var(--gray-100);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: white;
+}
+.agent-card.lead {
+  border-color: var(--indigo);
+  background: linear-gradient(to right, var(--indigo-light) 0%, white 100%);
+}
+.agent-card.specialist {
+  border-color: var(--cyan);
+  background: linear-gradient(to right, var(--cyan-light) 0%, white 100%);
+}
+.agent-card .agent-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.agent-card .avatar {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.agent-card.lead .avatar { background: var(--indigo); color: white; }
+.agent-card.specialist .avatar { background: var(--cyan); color: white; }
+.agent-card .agent-info { flex: 1; }
+.agent-card .agent-name {
+  font-weight: 600;
+  font-size: 14px;
+}
+.agent-card .agent-meta {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+.agent-card .agent-amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--indigo);
+}
+.agent-card .agent-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--gray-100);
+}
+.agent-card .agent-actions button {
+  flex: 1;
+  padding: 6px;
+  font-size: 11px;
+  border: 1px solid var(--gray-300);
+  background: white;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--gray-700);
+}
+.agent-card .agent-actions button.danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.status-pill.in-progress { background: var(--orange-light); color: var(--orange); }
+.status-pill.accepted { background: var(--green-light); color: var(--green); }
+.status-pill.pending { background: var(--gray-100); color: var(--gray-500); }
+
+.invite-button {
+  width: 100%;
+  padding: 14px;
+  border: 2px dashed var(--indigo);
+  background: transparent;
+  color: var(--indigo);
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+.invite-button:hover {
+  background: var(--indigo-light);
+}
+.invite-button .small {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--gray-500);
+  margin-left: 8px;
+}
+
+/* Footer button */
+.footer-action {
+  padding: 16px;
+  border-top: 1px solid var(--gray-100);
+}
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--green);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+.btn-primary:hover { background: #059669; }
+
+/* SPLIT MODAL */
+.split-slider-row {
+  margin-bottom: 12px;
+}
+.split-slider-row .row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+.split-slider-row .name {
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.split-slider-row .amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 13px;
+}
+.split-slider-row input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 6px;
+  background: var(--gray-100);
+  border-radius: 3px;
+  outline: none;
+}
+.split-slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: var(--indigo);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid white;
+  box-shadow: 0 2px 6px rgba(79,70,229,0.3);
+}
+.split-slider-row .percent {
+  text-align: right;
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 2px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sum-display {
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin: 12px 0;
+  text-align: center;
+}
+.sum-display.ok {
+  background: var(--green-light);
+  color: var(--green);
+}
+.sum-display.error {
+  background: var(--red-light);
+  color: var(--red);
+}
+
+.hint-card {
+  background: var(--gray-50);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--gray-700);
+  margin: 12px 0;
+}
+.hint-card .reset {
+  color: var(--indigo);
+  text-decoration: underline;
+  cursor: pointer;
+  font-weight: 600;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: 12px;
+  margin-top: 4px;
+  display: inline-block;
+}
+
+/* Helper invite list */
+.helper-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--gray-100);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: white;
+}
+.helper-card:hover {
+  border-color: var(--indigo);
+}
+.helper-card .avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--gray-100);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.helper-card .info { flex: 1; }
+.helper-card .name { font-weight: 600; font-size: 13px; }
+.helper-card .meta {
+  font-size: 11px;
+  color: var(--gray-500);
+  margin-top: 2px;
+}
+.helper-card button {
+  padding: 8px 14px;
+  background: var(--indigo);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+}
+.helper-card button:hover { background: var(--indigo-dark); }
+.helper-card .rating {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--orange);
+  margin-top: 2px;
+}
+
+/* Privacy banner */
+.privacy-banner {
+  display: flex;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--indigo-light);
+  border-radius: 8px;
+  font-size: 11px;
+  color: var(--indigo-dark);
+  margin: 12px 0;
+}
+.privacy-banner .icon { font-size: 14px; }
+
+/* Notification badge */
+.notif-screen {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: white;
+  padding: 24px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.notif-timer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  background: rgba(255,255,255,0.15);
+  padding: 6px 12px;
+  border-radius: 20px;
+  width: fit-content;
+  margin: 0 auto 24px;
+}
+.notif-timer .dot {
+  width: 8px; height: 8px;
+  background: var(--red);
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.notif-screen h3 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  font-weight: 700;
+}
+.notif-detail {
+  background: rgba(255,255,255,0.1);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  backdrop-filter: blur(10px);
+}
+.notif-detail .row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.notif-detail .row .icon { width: 20px; }
+.notif-detail .amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 18px;
+  font-weight: 700;
+  color: #34d399;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.15);
+}
+.notif-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: auto;
+}
+.notif-actions button {
+  flex: 1;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+.notif-actions .reject {
+  background: rgba(239,68,68,0.2);
+  color: white;
+  border: 1px solid var(--red);
+}
+.notif-actions .accept {
+  background: var(--green);
+  color: white;
+  box-shadow: 0 4px 16px rgba(16,185,129,0.4);
+}
+
+/* Earnings list */
+.earnings-summary {
+  background: linear-gradient(135deg, var(--indigo) 0%, var(--indigo-dark) 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 20px;
+}
+.earnings-summary .label { font-size: 12px; opacity: 0.85; }
+.earnings-summary .total {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 28px;
+  font-weight: 800;
+  margin: 4px 0 12px;
+}
+.role-bar {
+  margin-bottom: 8px;
+}
+.role-bar .row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.role-bar .bar {
+  height: 6px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.role-bar .bar .fill {
+  height: 100%;
+  background: white;
+  border-radius: 3px;
+}
+
+.order-row {
+  padding: 14px;
+  border: 1px solid var(--gray-100);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: white;
+  cursor: pointer;
+}
+.order-row:hover {
+  border-color: var(--indigo);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+.order-row .top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--gray-500);
+  margin-bottom: 4px;
+}
+.order-row .title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.order-row .meta { font-size: 11px; color: var(--gray-500); margin-bottom: 8px; }
+.order-row .amount {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: var(--indigo);
+}
+
+/* Step screen tabs */
+.screen-label {
+  position: absolute;
+  bottom: -36px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--gray-700);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.hidden { display: none !important; }
+
+/* Reject reason picker */
+.reason-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: flex-end;
+  z-index: 10;
+}
+.reason-modal {
+  background: white;
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  padding: 20px;
+}
+.reason-modal h4 { margin-bottom: 16px; }
+.reason-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.reason-option:hover { background: var(--gray-50); }
+.reason-option input[type="radio"] { accent-color: var(--indigo); }
+
+@media (max-width: 720px) {
+  .phones-grid { grid-template-columns: 1fr; }
+  .phone { width: 100%; max-width: 360px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>SMP · Multi-Agent UX Mockup</h1>
+  <p>Interactive mockup cho Mobile UX review · Sprint 1 milestone · v3.5+</p>
+</div>
+
+<div class="controls">
+  <button class="tab-btn active" onclick="showView('all')">Tất cả screens</button>
+  <button class="tab-btn" onclick="showView('lead')">Lead flow</button>
+  <button class="tab-btn" onclick="showView('helper')">Helper flow</button>
+  <button class="tab-btn" onclick="showView('earnings')">Earnings</button>
+</div>
+
+<div class="phones-grid">
+
+  <!-- ========== PHONE 1: Step detail (Lead view, with 2 agents) ========== -->
+  <div class="phone" data-view="lead">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>10:42</span>
+        <span>📶 100% 🔋</span>
+      </div>
+      <div class="app-header">
+        <button class="back">←</button>
+        <h2>Step 3 · Lắp đặt</h2>
+        <button class="info">ⓘ</button>
+      </div>
+      <div class="content">
+        <div class="order-meta">
+          <div class="label">Đơn</div>
+          <div class="value">#ORD-456 · Anh Nguyễn Văn A</div>
+          <div class="label" style="margin-top:8px">Bắt đầu</div>
+          <div class="value">10:30 hôm nay</div>
+        </div>
+
+        <div class="revenue-card">
+          <div class="small">Doanh thu step này</div>
+          <div class="big">300.000 ₫</div>
+          <div class="small-bottom">30% của đơn 1.000.000 ₫</div>
+        </div>
+
+        <div class="section-title">Team (2 người)</div>
+
+        <div class="agent-card lead">
+          <div class="agent-row">
+            <div class="avatar">⭐</div>
+            <div class="agent-info">
+              <div class="agent-name">Bạn</div>
+              <div class="agent-meta">Lead · 60% · <span class="status-pill in-progress">Đang làm</span></div>
+            </div>
+            <div class="agent-amount">180.000₫</div>
+          </div>
+        </div>
+
+        <div class="agent-card specialist">
+          <div class="agent-row">
+            <div class="avatar">⚡</div>
+            <div class="agent-info">
+              <div class="agent-name">Anh Trần B</div>
+              <div class="agent-meta">Specialist · Electrician · 40% · <span class="status-pill accepted">Đã accept</span></div>
+            </div>
+            <div class="agent-amount">120.000₫</div>
+          </div>
+          <div class="agent-actions">
+            <button>Đổi tỉ lệ</button>
+            <button class="danger">Xóa khỏi step</button>
+          </div>
+        </div>
+
+        <button class="invite-button">
+          <span>➕</span>
+          <span>Mời thêm thợ phụ</span>
+        </button>
+      </div>
+      <div class="footer-action">
+        <button class="btn-primary">✓ Hoàn thành step</button>
+      </div>
+    </div>
+    <div class="screen-label">Screen 1 · Lead view với 2 agents</div>
+  </div>
+
+  <!-- ========== PHONE 2: Set split modal ========== -->
+  <div class="phone" data-view="lead">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>10:43</span>
+        <span>📶 100% 🔋</span>
+      </div>
+      <div class="app-header">
+        <button class="back">✕</button>
+        <h2>Set tỉ lệ chia tiền</h2>
+        <button class="info"> </button>
+      </div>
+      <div class="content">
+        <div class="section-title">Chia tiền cho team (Step 3 · 300.000 ₫)</div>
+
+        <div class="split-slider-row">
+          <div class="row-header">
+            <div class="name">⭐ Bạn (Lead)</div>
+            <div class="amount" id="amt-lead">180.000₫</div>
+          </div>
+          <input type="range" min="0" max="100" value="60" id="slider-lead" oninput="updateSplit()">
+          <div class="percent" id="pct-lead">60%</div>
+        </div>
+
+        <div class="split-slider-row">
+          <div class="row-header">
+            <div class="name">⚡ Anh Trần B (Electrician)</div>
+            <div class="amount" id="amt-spec">120.000₫</div>
+          </div>
+          <input type="range" min="0" max="100" value="40" id="slider-spec" oninput="updateSplit()">
+          <div class="percent" id="pct-spec">40%</div>
+        </div>
+
+        <div class="sum-display ok" id="sum-display">
+          ✓ Tổng: 100% (300.000 ₫)
+        </div>
+
+        <div class="hint-card">
+          Mặc định service "Sửa máy lạnh": Lead 50% · Electrician 50%
+          <br><button class="reset" onclick="resetSplit()">Reset về mặc định</button>
+        </div>
+
+        <div class="section-title">Lý do tùy chỉnh (optional)</div>
+        <textarea placeholder="VD: Tôi làm phần khó hơn..." style="width:100%;padding:10px;border:1px solid var(--gray-300);border-radius:8px;font-family:inherit;font-size:13px;resize:none" rows="2"></textarea>
+      </div>
+      <div class="footer-action" style="display:flex;gap:8px">
+        <button style="flex:1;padding:14px;background:white;border:1px solid var(--gray-300);color:var(--gray-700);border-radius:12px;font-family:inherit;font-weight:600;font-size:14px;cursor:pointer">Hủy</button>
+        <button class="btn-primary" style="flex:2">✉️ Gửi lời mời</button>
+      </div>
+    </div>
+    <div class="screen-label">Screen 2 · Adjust split (interactive)</div>
+  </div>
+
+  <!-- ========== PHONE 3: Invite helper modal ========== -->
+  <div class="phone" data-view="lead">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>10:38</span>
+        <span>📶 100% 🔋</span>
+      </div>
+      <div class="app-header">
+        <button class="back">✕</button>
+        <h2>Mời thợ phụ</h2>
+        <button class="info"> </button>
+      </div>
+      <div class="content">
+        <div class="section-title">Loại thợ</div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <label style="flex:1;padding:10px;border:1px solid var(--gray-300);border-radius:8px;cursor:pointer;text-align:center;font-size:12px">
+            <input type="radio" name="role" style="margin-right:4px">Helper
+          </label>
+          <label style="flex:1;padding:10px;border:2px solid var(--indigo);background:var(--indigo-light);color:var(--indigo);border-radius:8px;cursor:pointer;text-align:center;font-size:12px;font-weight:600">
+            <input type="radio" name="role" checked style="margin-right:4px">Specialist ✓
+          </label>
+        </div>
+
+        <div class="section-title">Chuyên môn</div>
+        <select style="width:100%;padding:10px;border:1px solid var(--gray-300);border-radius:8px;font-family:inherit;font-size:13px;margin-bottom:16px">
+          <option>⚡ Thợ điện (electrician)</option>
+          <option>🔧 Thợ ống nước (plumber)</option>
+          <option>🌐 Thợ mạng (network)</option>
+        </select>
+
+        <div class="section-title">Thợ gần đây · sẵn sàng</div>
+
+        <div class="helper-card">
+          <div class="avatar">👤</div>
+          <div class="info">
+            <div class="name">Anh Trần B</div>
+            <div class="rating">⭐ 4.8 · L3</div>
+            <div class="meta">Cách 2.3km · Electrician</div>
+          </div>
+          <button>Mời</button>
+        </div>
+
+        <div class="helper-card">
+          <div class="avatar">👤</div>
+          <div class="info">
+            <div class="name">Anh Lê C</div>
+            <div class="rating">⭐ 4.5 · L2</div>
+            <div class="meta">Cách 3.1km · Electrician</div>
+          </div>
+          <button>Mời</button>
+        </div>
+
+        <div class="helper-card">
+          <div class="avatar">👤</div>
+          <div class="info">
+            <div class="name">Anh Phạm D</div>
+            <div class="rating">⭐ 4.9 · L4</div>
+            <div class="meta">Cách 5.0km · Electrician</div>
+          </div>
+          <button>Mời</button>
+        </div>
+
+        <button style="width:100%;padding:10px;background:transparent;border:none;color:var(--indigo);font-weight:600;font-size:13px;cursor:pointer">
+          Xem thêm thợ ↓
+        </button>
+      </div>
+    </div>
+    <div class="screen-label">Screen 3 · Invite helper list</div>
+  </div>
+
+  <!-- ========== PHONE 4: Helper invitation notification ========== -->
+  <div class="phone" data-view="helper">
+    <div class="phone-screen">
+      <div class="notif-screen">
+        <div class="notif-timer">
+          <div class="dot"></div>
+          <span>Còn 27:43 phút</span>
+        </div>
+
+        <div style="text-align:center;margin-bottom:16px">
+          <div style="font-size:48px;margin-bottom:8px">🔔</div>
+          <h3>Lời mời mới từ Lead</h3>
+        </div>
+
+        <p style="text-align:center;font-size:13px;opacity:0.85;margin-bottom:20px">
+          Anh Trần A mời bạn vào step "Lắp đặt" của đơn #ORD-456
+        </p>
+
+        <div class="notif-detail">
+          <div class="row">
+            <span class="icon">📍</span>
+            <span>Quận 7, TP.HCM (cách 2.3km)</span>
+          </div>
+          <div class="row">
+            <span class="icon">⏰</span>
+            <span>Bắt đầu: 10:30 hôm nay</span>
+          </div>
+          <div class="row">
+            <span class="icon">⏱️</span>
+            <span>Dự kiến: 1 giờ</span>
+          </div>
+          <div class="row">
+            <span class="icon">🛠️</span>
+            <span>Vai trò: Specialist · Electrician</span>
+          </div>
+          <div class="amount">💰 Bạn nhận: 120.000 ₫ (40%)</div>
+        </div>
+
+        <div style="text-align:center;font-size:11px;opacity:0.75;margin-bottom:20px">
+          Service: Lắp đặt máy lạnh · Step 3/5
+        </div>
+
+        <div class="notif-actions">
+          <button class="reject" onclick="showReasonModal()">❌ Từ chối</button>
+          <button class="accept">✅ Nhận lời mời</button>
+        </div>
+      </div>
+
+      <!-- Reason picker modal (initially hidden) -->
+      <div class="reason-overlay hidden" id="reason-modal">
+        <div class="reason-modal">
+          <h4>Lý do từ chối</h4>
+          <label class="reason-option"><input type="radio" name="reason"> Quá xa</label>
+          <label class="reason-option"><input type="radio" name="reason"> Bận việc khác</label>
+          <label class="reason-option"><input type="radio" name="reason"> Sai chuyên môn</label>
+          <label class="reason-option"><input type="radio" name="reason"> Lý do cá nhân</label>
+          <label class="reason-option"><input type="radio" name="reason"> Khác (ghi rõ)</label>
+          <div style="display:flex;gap:8px;margin-top:16px">
+            <button onclick="hideReasonModal()" style="flex:1;padding:12px;border:1px solid var(--gray-300);background:white;border-radius:8px;font-family:inherit;font-weight:600;cursor:pointer">Hủy</button>
+            <button class="btn-primary" style="flex:1" onclick="hideReasonModal()">Gửi</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Screen 4 · Helper invitation push</div>
+  </div>
+
+  <!-- ========== PHONE 5: Helper step detail (after accept) ========== -->
+  <div class="phone" data-view="helper">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>10:45</span>
+        <span>📶 100% 🔋</span>
+      </div>
+      <div class="app-header">
+        <button class="back">←</button>
+        <h2>Step 3 · Lắp đặt</h2>
+        <button class="info">ⓘ</button>
+      </div>
+      <div class="content">
+        <div class="order-meta">
+          <div class="label">Đơn</div>
+          <div class="value">#ORD-456</div>
+        </div>
+
+        <div class="revenue-card">
+          <div class="small">Bạn nhận từ step này</div>
+          <div class="big">120.000 ₫</div>
+          <div class="small-bottom">40% · Specialist · Electrician</div>
+        </div>
+
+        <div class="section-title">Lead của step</div>
+
+        <div class="agent-card lead">
+          <div class="agent-row">
+            <div class="avatar">⭐</div>
+            <div class="agent-info">
+              <div class="agent-name">Anh Trần A</div>
+              <div class="agent-meta">Lead · L4 · 7 năm KN</div>
+            </div>
+          </div>
+          <div class="agent-actions">
+            <button>📞 Gọi</button>
+            <button>💬 Chat</button>
+          </div>
+        </div>
+
+        <div class="privacy-banner">
+          <span class="icon">🔒</span>
+          <span>Tỉ lệ chia tiền do Lead quyết định. Bạn không xem được tỉ lệ của các thợ khác.</span>
+        </div>
+
+        <div class="section-title">Trạng thái của bạn</div>
+        <div style="padding:12px;background:var(--green-light);border-radius:12px;font-size:13px;color:var(--green);font-weight:600;text-align:center">
+          ✓ Đã accept · Sẵn sàng làm
+        </div>
+      </div>
+      <div class="footer-action">
+        <button class="btn-primary">Bắt đầu làm việc</button>
+      </div>
+    </div>
+    <div class="screen-label">Screen 5 · Helper view (after accept)</div>
+  </div>
+
+  <!-- ========== PHONE 6: Earnings summary ========== -->
+  <div class="phone" data-view="earnings">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>15:20</span>
+        <span>📶 100% 🔋</span>
+      </div>
+      <div class="app-header">
+        <button class="back">←</button>
+        <h2>Thu nhập 06/2026</h2>
+        <button class="info"> </button>
+      </div>
+      <div class="content">
+        <div class="earnings-summary">
+          <div class="label">Tổng tháng này</div>
+          <div class="total">8.500.000 ₫</div>
+
+          <div class="role-bar">
+            <div class="row">
+              <span>⭐ Lead</span>
+              <span>6.200.000 ₫</span>
+            </div>
+            <div class="bar"><div class="fill" style="width:73%"></div></div>
+          </div>
+
+          <div class="role-bar">
+            <div class="row">
+              <span>👤 Helper</span>
+              <span>1.500.000 ₫</span>
+            </div>
+            <div class="bar"><div class="fill" style="width:18%"></div></div>
+          </div>
+
+          <div class="role-bar">
+            <div class="row">
+              <span>⚡ Specialist</span>
+              <span>800.000 ₫</span>
+            </div>
+            <div class="bar"><div class="fill" style="width:9%"></div></div>
+          </div>
+        </div>
+
+        <div class="section-title">Lịch sử đơn</div>
+
+        <div class="order-row">
+          <div class="top">
+            <span>15/06 · 17:30</span>
+            <span>#ORD-456</span>
+          </div>
+          <div class="title">Lắp đặt máy lạnh</div>
+          <div class="meta">5 steps · ⭐ Lead</div>
+          <div class="amount">+ 680.000 ₫</div>
+        </div>
+
+        <div class="order-row">
+          <div class="top">
+            <span>14/06 · 14:20</span>
+            <span>#ORD-455</span>
+          </div>
+          <div class="title">Lắp camera an ninh</div>
+          <div class="meta">4 steps · ⚡ Specialist (Electrician)</div>
+          <div class="amount">+ 240.000 ₫</div>
+        </div>
+
+        <div class="order-row">
+          <div class="top">
+            <span>13/06 · 11:00</span>
+            <span>#ORD-454</span>
+          </div>
+          <div class="title">Sửa máy giặt</div>
+          <div class="meta">3 steps · ⭐ Lead</div>
+          <div class="amount">+ 420.000 ₫</div>
+        </div>
+
+        <div class="order-row">
+          <div class="top">
+            <span>12/06 · 09:15</span>
+            <span>#ORD-453</span>
+          </div>
+          <div class="title">Vệ sinh máy lạnh</div>
+          <div class="meta">3 steps · 👤 Helper</div>
+          <div class="amount">+ 80.000 ₫</div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Screen 6 · Earnings summary</div>
+  </div>
+
+  <!-- ========== PHONE 7: Order detail earnings ========== -->
+  <div class="phone" data-view="earnings">
+    <div class="phone-screen">
+      <div class="status-bar">
+        <span>15:21</span>
+        <span>📶 100% 🔋</span>
+      </div>
+      <div class="app-header">
+        <button class="back">←</button>
+        <h2>ORD-456 · Earnings</h2>
+        <button class="info"> </button>
+      </div>
+      <div class="content">
+        <div style="margin-bottom:16px">
+          <div style="font-weight:700;font-size:15px">Lắp đặt máy lạnh</div>
+          <div style="font-size:12px;color:var(--gray-500);margin-top:4px">Hoàn thành 15/06 17:30</div>
+          <div style="font-size:12px;color:var(--gray-500)">Doanh thu đơn: 1.000.000 ₫</div>
+        </div>
+
+        <div class="revenue-card">
+          <div class="small">Tổng bạn nhận</div>
+          <div class="big">680.000 ₫</div>
+          <div class="small-bottom">Lead trong tất cả 5 steps</div>
+        </div>
+
+        <div class="section-title">Chi tiết theo step</div>
+
+        <div class="agent-card lead">
+          <div class="agent-row">
+            <div class="agent-info">
+              <div class="agent-name">Step 1 · Khảo sát</div>
+              <div class="agent-meta">⭐ Lead · 100% · Step revenue 80.000 ₫</div>
+            </div>
+            <div class="agent-amount">80.000₫</div>
+          </div>
+        </div>
+
+        <div class="agent-card lead">
+          <div class="agent-row">
+            <div class="agent-info">
+              <div class="agent-name">Step 2 · Đục tường + ống</div>
+              <div class="agent-meta">⭐ Lead · 50% · Step revenue 250.000 ₫</div>
+            </div>
+            <div class="agent-amount">125.000₫</div>
+          </div>
+        </div>
+
+        <div class="agent-card lead">
+          <div class="agent-row">
+            <div class="agent-info">
+              <div class="agent-name">Step 3 · Lắp dàn nóng</div>
+              <div class="agent-meta">⭐ Lead · 50% · Step revenue 250.000 ₫</div>
+            </div>
+            <div class="agent-amount">125.000₫</div>
+          </div>
+        </div>
+
+        <div class="agent-card lead">
+          <div class="agent-row">
+            <div class="agent-info">
+              <div class="agent-name">Step 4 · Lắp dàn lạnh + đấu điện</div>
+              <div class="agent-meta">⭐ Lead · 40% · 3 agents</div>
+            </div>
+            <div class="agent-amount">108.000₫</div>
+          </div>
+          <div style="padding:8px 0 0 0;margin-top:8px;border-top:1px dashed var(--gray-100);font-size:11px;color:var(--gray-500)">
+            <div style="font-weight:600;margin-bottom:4px">Team breakdown (Lead view):</div>
+            ├ ⭐ Bạn: 40% (108.000₫)<br>
+            ├ ⚡ Trần B: 40% (108.000₫)<br>
+            └ 👤 Lê C: 20% (54.000₫)
+          </div>
+        </div>
+
+        <div class="agent-card lead">
+          <div class="agent-row">
+            <div class="agent-info">
+              <div class="agent-name">Step 5 · Test + nghiệm thu</div>
+              <div class="agent-meta">⭐ Lead · 60% · Step revenue 150.000 ₫</div>
+            </div>
+            <div class="agent-amount">90.000₫</div>
+          </div>
+        </div>
+
+        <div style="background:var(--gray-50);padding:12px;border-radius:12px;margin-top:16px;font-family:'JetBrains Mono',monospace;font-size:12px">
+          <div style="color:var(--gray-500);margin-bottom:4px">Tổng:</div>
+          <div>80k + 125k + 125k + 108k + 90k</div>
+          <div style="font-weight:700;color:var(--green);margin-top:4px">= 680.000 ₫ ✓</div>
+        </div>
+      </div>
+    </div>
+    <div class="screen-label">Screen 7 · Order earnings detail</div>
+  </div>
+
+</div>
+
+<script>
+function showView(view) {
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  event.target.classList.add('active');
+
+  const phones = document.querySelectorAll('.phone');
+  phones.forEach(phone => {
+    if (view === 'all') {
+      phone.classList.remove('hidden');
+    } else if (phone.dataset.view === view) {
+      phone.classList.remove('hidden');
+    } else {
+      phone.classList.add('hidden');
+    }
+  });
+}
+
+// Split slider interactivity
+function updateSplit() {
+  const stepRevenue = 300000;
+  const leadEl = document.getElementById('slider-lead');
+  const specEl = document.getElementById('slider-spec');
+  const lead = parseInt(leadEl.value);
+  const spec = parseInt(specEl.value);
+  const sum = lead + spec;
+
+  document.getElementById('pct-lead').textContent = lead + '%';
+  document.getElementById('pct-spec').textContent = spec + '%';
+
+  document.getElementById('amt-lead').textContent =
+    Math.round(stepRevenue * lead / 100).toLocaleString('vi-VN') + '₫';
+  document.getElementById('amt-spec').textContent =
+    Math.round(stepRevenue * spec / 100).toLocaleString('vi-VN') + '₫';
+
+  const sumEl = document.getElementById('sum-display');
+  if (sum === 100) {
+    sumEl.className = 'sum-display ok';
+    sumEl.textContent = '✓ Tổng: 100% (' + stepRevenue.toLocaleString('vi-VN') + ' ₫)';
+  } else if (sum < 100) {
+    sumEl.className = 'sum-display error';
+    sumEl.textContent = '⚠️ Còn thiếu ' + (100 - sum) + '%';
+  } else {
+    sumEl.className = 'sum-display error';
+    sumEl.textContent = '⚠️ Thừa ' + (sum - 100) + '%';
+  }
+}
+
+function resetSplit() {
+  document.getElementById('slider-lead').value = 50;
+  document.getElementById('slider-spec').value = 50;
+  updateSplit();
+}
+
+function showReasonModal() {
+  document.getElementById('reason-modal').classList.remove('hidden');
+}
+function hideReasonModal() {
+  document.getElementById('reason-modal').classList.add('hidden');
+}
+</script>
+
+</body>
+</html>

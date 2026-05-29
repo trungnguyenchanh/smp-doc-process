@@ -42,9 +42,12 @@
 | `refund_payable` | LIABILITY | Cr | Hoàn đã duyệt, chờ chi về nguồn gốc | |
 | `loyalty_liability` | LIABILITY | Cr | Giá trị điểm đang lưu hành | |
 | `service_guarantee_reserve` | LIABILITY | Cr | Quỹ bảo hành/đảm bảo dịch vụ | **RENAME** từ `insurance_fund` |
+| `deferred_revenue` | LIABILITY | Cr | Doanh thu chưa thực hiện (gói BH) · subledger theo customer_warranty_id | **MỚI v3.5** |
 | `vat_payable` | LIABILITY | Cr | VAT phải nộp (rate đọc từ `tax_config`) | |
 | `revenue_commission` | REVENUE | Cr | Doanh thu commission SMP | |
+| `revenue_warranty_subscription` | REVENUE | Cr | Doanh thu thuê bao BH (recognized hàng tháng) | **MỚI v3.5** |
 | `gateway_fee_expense` | EXPENSE | Dr | Phí cổng SMP gánh | **MỚI** |
+| `warranty_service_cost` | EXPENSE | Dr | Chi phí phục vụ claim BH (agent payable + materials) | **MỚI v3.5** |
 | `marketing_expense` | EXPENSE | Dr | Chi phí điểm/referral | |
 | `rounding_adjustment` | EXPENSE | Dr/Cr | Hấp thụ chênh làm tròn cross-entry | **MỚI** |
 
@@ -146,6 +149,233 @@ CREATE TABLE journal_lines (
 | Thợ không remit sau khi SMP đã refund | `agent_debt` P | `agent_cod_receivable` P |
 
 > **Bug #3 (COD-refund-before-remit)**: KH trả cash cho thợ rồi dispute → SMP hoàn về ví KH bằng cách đảo `cod_clearing` (chưa từng recognize revenue nên sạch), nhưng `agent_cod_receivable` **vẫn còn** → thợ vẫn nợ cash, SMP thu hồi sau. Có timing exposure (SMP credit ví trước khi cầm cash) → kiểm soát bằng COD cap + agent whitelist (ADR-004).
+
+### 3.5 Multi-agent step earnings (v3.5+)
+
+> Khi 1 step có nhiều agents (lead + helpers + specialists), commission của step được chia ra **NHIỀU dòng `agent_payable`** thay vì 1 dòng tổng. Schema xem [Doc 02 §7.7](../02-database/02-database-schema.md). Compute logic xem [Doc 04 §1.15.3](../03-backend/04-coding-standards-and-dev-setup.md). Rules xem [Doc 15 Section Q](../05-ba/15-business-rules.md).
+
+#### 3.5.1 · Pattern · Step completed → split per agent
+
+Khi `order_step.status` chuyển sang `completed`:
+
+```text
+1. Compute step_revenue = order.total × step_weight_bps / 10000
+2. Compute amount_earned per agent = step_revenue × split_bps / 10000
+3. Apply N=P-C-V rule per step (commission part only):
+   step_commission = step_revenue × commission_bps / 10000
+4. For each agent: amount_earned_to_agent = step_commission × agent.split_bps / 10000
+5. Lead absorbs residual rounding
+6. Post 1 journal_entry containing N+1 lines:
+   - 1 line debit revenue_commission
+   - N lines credit agent_payable[agent_id]
+```
+
+#### 3.5.2 · Journal template · Step completed (3 agents on step)
+
+Example: order = 1,000,000 VND, step 3 weight = 30%, step_commission = 45,000 VND (15% of 300k step_revenue).
+Agents: lead A 40%, specialist C 40%, helper D 20%.
+
+| Line | Account | Debit | Credit | Owner |
+|---|---|---:|---:|---|
+| 1 | `revenue_commission` | 45,000 | — | — |
+| 2 | `agent_payable[A]` (lead, absorbs residual) | — | 18,000 | A |
+| 3 | `agent_payable[C]` (specialist) | — | 18,000 | C |
+| 4 | `agent_payable[D]` (helper) | — | 9,000 | D |
+| | **Σ** | **45,000** | **45,000** | ✓ |
+
+Journal entry metadata:
+- `entry_type`: `step_earnings`
+- `reference_type`: `order_step`
+- `reference_id`: `order_step_id`
+- `event_source`: `StepCompleted` event from Doc 18
+
+#### 3.5.3 · Rounding rule for multi-agent (extends §4)
+
+```text
+P=99,999, step_weight=3000bps (30%), commission_bps=1500
+step_revenue = 99,999 × 3000/10000 = 29,999 (29,999.7 round down)
+                                    ← residual goes to lead's step if last step
+
+step_commission = 29,999 × 1500/10000 = 4,499 (4,499.85 round)
+agent_helper_D = 4,499 × 2000/10000 = 899
+agent_specialist_C = 4,499 × 4000/10000 = 1,799
+agent_lead_A = step_commission − agent_helper_D − agent_specialist_C
+             = 4,499 − 899 − 1,799 = 1,801 ← lead absorbs residual
+
+Σ = 899 + 1,799 + 1,801 = 4,499 ✓ matches step_commission exactly
+```
+
+Rule: **Lead always absorbs residual** for both step-level and agent-level rounding.
+
+#### 3.5.4 · Warranty cost recovery (multi-agent)
+
+Per BR-MA-006: chỉ `primary_lead_agent_id` chịu warranty cost.
+
+| Scenario | Debit | Credit | Note |
+|---|---|---|---|
+| Warranty claim cost cho lead (BR-WARRANTY-004) | `agent_payable[primary_lead]` | `service_guarantee_reserve` | Lead bị trừ earnings tổng từ ledger |
+| Warranty manual reroute sang specialist (Ops decision, BR-MA-006 exception) | `agent_payable[specialist_id]` | `service_guarantee_reserve` | Audit log required |
+| Material defect (vendor liability) | `material_recovery_receivable` | `service_guarantee_reserve` | Helpers/lead KHÔNG bị touch |
+
+#### 3.5.5 · Refund matrix expansion cho multi-agent
+
+Refund pre-payout (no commission recognized yet):
+
+| Nghiệp vụ | Debit | Credit | Note |
+|---|---|---|---|
+| Refund full order trước khi step completed | `gateway_clearing` P | `customer_wallet` P | No commission ledger touched |
+| Refund partial step (vd dispute step 3 only) | (chưa applicable v3.5 · sẽ design v3.6) | — | TODO |
+
+Refund post-payout (commission recognized + distributed to agents):
+
+| Nghiệp vụ | Debit | Credit | Note |
+|---|---|---|---|
+| Refund customer (lead fault) | `gateway_clearing` P + `agent_payable[primary_lead]` (claw) | `customer_wallet` P + `revenue_commission` (reverse) | Helpers KHÔNG bị claw |
+| Refund customer (specialist fault, Ops decision) | `gateway_clearing` P + `agent_payable[specialist]` (claw) | `customer_wallet` P + `revenue_commission` (reverse) | Audit log required |
+
+#### 3.5.6 · Idempotency
+
+`StepEarningsCalculated` event MUST be idempotent:
+- Check `order_step.amount_earned IS NOT NULL` before posting → skip if already posted
+- Hash chain in `journal_entries` ensures duplicate posting detected (unique `reference_type+reference_id`)
+- DLQ retry safe: same step_id → same journal entry → same row_hash
+
+### 3.6 Warranty packages (deferred revenue) (v3.5+)
+
+> Khi KH mua gói bảo hành (vd 1,200,000 VND cho 12 tháng), KHÔNG được recognize revenue ngay. Phải theo chuẩn kế toán VN VAS 14 (Revenue) + IFRS 15: **defer toàn bộ vào `deferred_revenue`, recognize dần theo tháng**. Schema xem [Doc 02 §7.8](../02-database/02-database-schema.md), rules xem [Doc 15 Section R](../05-ba/15-business-rules.md).
+
+#### 3.6.1 · Lifecycle 4 sự kiện chính
+
+```text
+1. Purchase (sale)        → defer revenue
+2. Monthly recognition    → recognize 1/N của price (cron monthly)
+3. Claim used             → cost (separate from revenue recognition)
+4. Cancellation / refund  → reverse remaining deferred + refund cash
+```
+
+#### 3.6.2 · Pattern · KH mua gói (purchase)
+
+KH mua gói 1,200,000 VND (VAT 8% included → net 1,111,111 VND, VAT 88,889 VND):
+
+| Line | Account | Debit | Credit | Owner |
+|---|---|---:|---:|---|
+| 1 | `cash_gateway` (gateway payment) | 1,200,000 | — | — |
+| 2 | `deferred_revenue` (subledger=customer_warranty_id) | — | 1,111,111 | warranty_123 |
+| 3 | `vat_payable` | — | 88,889 | — |
+| | **Σ** | **1,200,000** | **1,200,000** | ✓ |
+
+**Note**: VAT recognized ngay tại sale (theo VN tax law), nhưng revenue defer.
+
+Journal entry metadata:
+- `entry_type`: `warranty_purchase`
+- `reference_type`: `customer_warranty`
+- `reference_id`: `customer_warranty.id`
+
+#### 3.6.3 · Pattern · Monthly revenue recognition (cron)
+
+Mỗi tháng, cron job process `warranty_revenue_recognition` table:
+
+For warranty 1,200,000 VND / 12 months = 100,000 VND/tháng (đã trừ VAT: 92,592.6 ≈ 92,593 VND/tháng net + VAT prorated):
+
+Để đơn giản, recognize đều theo net amount (1,111,111 / 12 = 92,592 + residual ở tháng cuối):
+
+| Line | Account | Debit | Credit | Owner |
+|---|---|---:|---:|---|
+| 1 | `deferred_revenue` (subledger) | 92,592 | — | warranty_123 |
+| 2 | `revenue_warranty_subscription` | — | 92,592 | — |
+| | **Σ** | **92,592** | **92,592** | ✓ |
+
+**Tháng thứ 12 (last)**: absorb residual to make total = original net 1,111,111.
+
+```text
+Monthly amount = floor(net_amount / duration_months)
+                = floor(1,111,111 / 12) = 92,592
+
+For months 1-11: each recognize 92,592 (total 1,018,512)
+For month 12:    recognize 1,111,111 - 1,018,512 = 92,599 (residual)
+```
+
+#### 3.6.4 · Pattern · KH claim sử dụng (vd vệ sinh AC)
+
+Claim approved → tạo order O-050 với `amount_charged=0, is_warranty_order=TRUE`. Step completed.
+
+Cost tracking (agent payable từ warranty fund, NOT từ customer):
+
+| Line | Account | Debit | Credit | Owner |
+|---|---|---:|---:|---|
+| 1 | `warranty_service_cost` | 200,000 | — | — |
+| 2 | `agent_payable` (subledger=agent_id) | — | 200,000 | agent_A |
+| | **Σ** | **200,000** | **200,000** | ✓ |
+
+**Important**:
+- Không touch `deferred_revenue` (recognition cứ tiếp tục theo schedule)
+- Không touch `customer_wallet` (KH không bị charge)
+- Agent vẫn earn bình thường (từ `warranty_service_cost`)
+- Multi-agent split (Doc 16 §3.5) vẫn áp dụng cho warranty orders
+
+Journal entry metadata:
+- `entry_type`: `warranty_claim_settled`
+- `reference_type`: `warranty_claim`
+- `reference_id`: `warranty_claim.id`
+
+#### 3.6.5 · Pattern · KH cancel gói (refund proportional)
+
+KH cancel sau 3 tháng (đã recognize 3 × 92,592 = 277,776 VND, còn deferred 833,335 VND):
+
+Refund logic: trả lại phần chưa recognize, KH chấp nhận mất phần đã consumed.
+
+Refund amount calculation:
+```text
+Remaining deferred (net): 1,111,111 - 277,776 = 833,335 VND
+Plus remaining VAT proportional: 88,889 × (9/12) = 66,667 VND
+Total refund: 833,335 + 66,667 = 900,002 VND
+```
+
+| Line | Account | Debit | Credit | Owner |
+|---|---|---:|---:|---|
+| 1 | `deferred_revenue` (subledger) | 833,335 | — | warranty_123 |
+| 2 | `vat_payable` (reverse VAT not yet paid · or via VAT adjustment) | 66,667 | — | — |
+| 3 | `customer_wallet` OR `gateway_clearing` (back to source) | — | 900,002 | cust_xyz |
+| | **Σ** | **900,002** | **900,002** | ✓ |
+
+**Edge case**: nếu KH đã sử dụng > X claims có giá trị > 833,335 → consider:
+- Option 1: vẫn refund full proportional (lose for SMP, customer-friendly)
+- Option 2: cap refund tại `deferred_remaining - claims_value` (Ops decision case-by-case)
+- v3.5: chọn Option 1 (simple). Option 2 defer v3.6.
+
+#### 3.6.6 · Pattern · Gói expire tự động
+
+Khi `customer_warranties.end_date_utc < NOW()` và `total_amount_recognized < net_amount`:
+
+→ Hậu kỳ: residual recognize toàn bộ phần còn lại (kế toán bảo thủ · không leave dangling deferred):
+
+| Line | Account | Debit | Credit |
+|---|---|---:|---:|
+| 1 | `deferred_revenue` (any residual) | X | — |
+| 2 | `revenue_warranty_subscription` | — | X |
+
+`customer_warranties.status` → `expired`.
+
+#### 3.6.7 · Reporting impact
+
+**P&L impact**:
+- Revenue line "Doanh thu thuê bao BH" = SUM(`revenue_warranty_subscription`) for period
+- COGS line "Chi phí dịch vụ BH" = SUM(`warranty_service_cost`) for period
+- **Gross margin BH** = Revenue - COGS (key metric · quan trọng cho pricing future packages)
+
+**Balance Sheet impact**:
+- `deferred_revenue` is short-term liability nếu < 12 months remaining, long-term nếu > 12 months
+- Cần report separate "Doanh thu chưa thực hiện ngắn hạn" và "dài hạn" theo VAS
+
+#### 3.6.8 · Reconciliation
+
+Daily reconcile:
+- `SUM(customer_warranties.price_paid - total_amount_recognized) == SUM(deferred_revenue) per subledger`
+- Drift > 0 → alert Finance Lead
+
+Monthly reconcile:
+- `SUM(warranty_revenue_recognition WHERE recognition_date IN this month) == revenue from journal_lines`
+- Discrepancy → review unprocessed schedule items
 
 ---
 

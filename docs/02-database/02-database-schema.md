@@ -1284,6 +1284,470 @@ Nếu chạy 30 ngày zero drift → confident cutover ở v3.6.
 
 ---
 
+## 7.7 · v3.5+ Multi-agent step assignment · DRAFT
+
+> 🆕 **New in v3.5+**: Hệ thống hiện tại assign 1 agent cho cả order. Yêu cầu mới: mỗi **step** trong order có thể có **nhiều agents** với role khác nhau (lead/helper/specialist) và **tỉ lệ chia tiền riêng**. Section này định nghĩa schema extension cần thiết.
+
+### 7.7.1 · Design principles
+
+1. **1 service template = N steps cố định** (định nghĩa trước trong `service_steps`)
+2. **1 step có exactly 1 lead** + 0..N helpers/specialists
+3. **Step weight + role split = hybrid**: service-level default + lead có thể override per order
+4. **Warranty liability**: chỉ lead chịu, helpers không liable
+5. **Earnings calc per step**: khi step completed → post journal entries riêng cho từng agent
+
+### 7.7.2 · ALTER existing tables
+
+#### `smp_catalog.service_steps` (add weight column)
+
+```sql
+ALTER TABLE smp_catalog.service_steps
+  ADD COLUMN default_step_weight_bps INT UNSIGNED NOT NULL DEFAULT 0
+    COMMENT 'Default weight of this step in basis points · sum per service = 10000 (100%)',
+  ADD CONSTRAINT chk_weight_bps CHECK (default_step_weight_bps BETWEEN 0 AND 10000);
+
+-- App-level validation: SUM(default_step_weight_bps) per service_id MUST = 10000
+-- Migration: backfill existing services with EQUAL weights (10000 / N steps)
+```
+
+#### `smp_order.order_steps` (add multi-agent fields)
+
+```sql
+ALTER TABLE smp_order.order_steps
+  ADD COLUMN step_weight_bps INT UNSIGNED NOT NULL DEFAULT 0
+    COMMENT 'Effective weight for this order_step (default or overridden)',
+  ADD COLUMN step_revenue BIGINT UNSIGNED NULL
+    COMMENT 'Computed: order.total × step_weight_bps / 10000 · set when step starts',
+  ADD COLUMN lead_agent_id BIGINT UNSIGNED NULL
+    COMMENT 'Denormalized FK to order_step_agents WHERE role=lead · for fast lookup',
+  ADD COLUMN weight_overridden BOOLEAN DEFAULT FALSE,
+  ADD COLUMN weight_override_by BIGINT UNSIGNED NULL,
+  ADD COLUMN weight_override_at_utc DATETIME(3) NULL,
+  ADD INDEX idx_ostep_lead (lead_agent_id);
+```
+
+### 7.7.3 · NEW table · `service_step_role_splits` (template)
+
+```sql
+CREATE TABLE smp_catalog.service_step_role_splits (
+  id                  BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  service_step_id     BIGINT UNSIGNED NOT NULL COMMENT 'FK to service_steps.id',
+  role                VARCHAR(16) NOT NULL COMMENT 'lead | helper | specialist',
+  specialty           VARCHAR(64) NULL COMMENT 'electrician, plumber, NULL for generic helper',
+  default_split_bps   INT UNSIGNED NOT NULL COMMENT '7000 = 70%',
+  min_required        TINYINT UNSIGNED NOT NULL DEFAULT 0 COMMENT 'min agents for this role · lead always 1',
+  max_allowed         TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  created_at_utc      DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_ssrs_step FOREIGN KEY (service_step_id) REFERENCES service_steps(id) ON DELETE CASCADE,
+  CONSTRAINT chk_split_bps CHECK (default_split_bps BETWEEN 0 AND 10000),
+  CONSTRAINT chk_role CHECK (role IN ('lead','helper','specialist')),
+  UNIQUE KEY uniq_step_role_specialty (service_step_id, role, specialty),
+  INDEX idx_ssrs_step (service_step_id)
+) ENGINE=InnoDB
+  COMMENT='Template: role splits per service_step · SUM(default_split_bps) per service_step_id MUST = 10000';
+
+-- App-level validation:
+--   - Exactly 1 row WHERE role='lead' per service_step_id
+--   - SUM(default_split_bps) per service_step_id = 10000
+--   - role='lead' MUST have specialty IS NULL
+```
+
+### 7.7.4 · NEW table · `order_step_agents` (effective assignment)
+
+```sql
+CREATE TABLE smp_order.order_step_agents (
+  id                  BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  order_step_id       BIGINT UNSIGNED NOT NULL,
+  agent_id            BIGINT UNSIGNED NOT NULL,
+  role                VARCHAR(16) NOT NULL,
+  specialty           VARCHAR(64) NULL,
+  split_bps           INT UNSIGNED NOT NULL COMMENT 'Effective split (default or override)',
+  is_override         BOOLEAN NOT NULL DEFAULT FALSE,
+  override_by         BIGINT UNSIGNED NULL COMMENT 'agent_id của lead who overrode',
+  override_at_utc     DATETIME(3) NULL,
+  status              VARCHAR(16) NOT NULL DEFAULT 'assigned',
+  assigned_at_utc     DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  accepted_at_utc     DATETIME(3) NULL,
+  completed_at_utc    DATETIME(3) NULL,
+  amount_earned       BIGINT UNSIGNED NULL COMMENT 'Computed when step.status=completed',
+  amount_currency     CHAR(3) NOT NULL DEFAULT 'VND',
+  CONSTRAINT fk_osa_step FOREIGN KEY (order_step_id) REFERENCES order_steps(id) ON DELETE CASCADE,
+  CONSTRAINT chk_osa_role CHECK (role IN ('lead','helper','specialist')),
+  CONSTRAINT chk_osa_split CHECK (split_bps BETWEEN 0 AND 10000),
+  CONSTRAINT chk_osa_status CHECK (status IN ('assigned','accepted','rejected','in_progress','completed','cancelled')),
+  UNIQUE KEY uniq_step_agent (order_step_id, agent_id),
+  INDEX idx_osa_agent_status (agent_id, status),
+  INDEX idx_osa_role (order_step_id, role)
+) ENGINE=InnoDB
+  COMMENT='N-to-N · multiple agents per step · SUM(split_bps) per order_step_id MUST = 10000';
+
+-- App-level validation (Doc 15 BR-MA-002, BR-MA-003):
+--   - Exactly 1 row WHERE role='lead' per order_step_id (before step can transition to in_progress)
+--   - SUM(split_bps) per order_step_id MUST = 10000 (before step can transition to completed)
+--   - role='lead' MUST have specialty IS NULL
+--   - status transitions: assigned → accepted → in_progress → completed (or cancelled/rejected)
+```
+
+### 7.7.5 · Earnings query view
+
+```sql
+CREATE VIEW v_agent_step_earnings AS
+SELECT
+  osa.agent_id,
+  osa.order_step_id,
+  os.order_id,
+  osa.role,
+  osa.split_bps,
+  os.step_revenue,
+  osa.amount_earned,
+  osa.amount_currency,
+  os.completed_at AS step_completed_at,
+  os.status AS step_status
+FROM smp_order.order_step_agents osa
+JOIN smp_order.order_steps os ON osa.order_step_id = os.id
+WHERE osa.status = 'completed' AND os.status = 'completed';
+```
+
+### 7.7.6 · Example scenario
+
+Service "Sửa máy lạnh", order total = 1,000,000 VND, 4 steps:
+
+```text
+service_steps (template):
+  step 1 "Tháo dỡ"      default_step_weight_bps = 3000 (30%)
+  step 2 "Vận chuyển"   default_step_weight_bps = 2000 (20%)
+  step 3 "Lắp đặt"      default_step_weight_bps = 3000 (30%)
+  step 4 "Hoàn thiện"   default_step_weight_bps = 2000 (20%)
+  SUM = 10000 ✓
+
+service_step_role_splits (template for step 3 "Lắp đặt"):
+  role=lead,        specialty=NULL,         default_split_bps=5000 (50%)
+  role=specialist,  specialty=electrician,  default_split_bps=5000 (50%)
+  SUM = 10000 ✓
+
+order_steps (actual for this order):
+  order_step_id=101, step_no=3, step_weight_bps=3000, step_revenue=300000, lead_agent_id=A
+
+order_step_agents (3 agents on step 3):
+  agent_id=A, role=lead,       split_bps=4000 (overridden 50→40), is_override=TRUE
+  agent_id=C, role=specialist, split_bps=4000 (overridden 50→40), is_override=TRUE
+  agent_id=D, role=helper,     split_bps=2000 (new helper added by lead)
+  SUM = 10000 ✓
+
+Earnings:
+  A: 300000 × 4000/10000 = 120,000 VND
+  C: 300000 × 4000/10000 = 120,000 VND
+  D: 300000 × 2000/10000 =  60,000 VND
+```
+
+### 7.7.7 · Migration plan
+
+| Phase | Action |
+|---|---|
+| v3.5 Sprint 1 | Add `default_step_weight_bps` to `service_steps` + backfill equal weights (10000/N) |
+| v3.5 Sprint 1 | Create `service_step_role_splits` table + seed default rows (1 lead 100% for all existing service_steps) |
+| v3.5 Sprint 2 | ALTER `order_steps` add multi-agent columns + backfill from existing single-agent data |
+| v3.5 Sprint 2 | Create `order_step_agents` + backfill from `order_steps.agent_id` → 1 row role='lead' split_bps=10000 |
+| v3.5 Sprint 3 | Build APIs assign/remove agent + override split (xem [Doc 03 §multi-agent](../03-backend/03-api-contract.md)) |
+| v3.6 | Service templates UI cho BA team config weights + role splits |
+| v3.6.5 | Drop `order_steps.agent_id` (replaced by `lead_agent_id` + `order_step_agents` table) |
+
+### 7.7.8 · Operational notes
+
+- **Performance**: with N agents per step + M steps per order → cardinality ~3-5× `order_steps`. Acceptable for pilot (~300 orders/day × 4 steps × 2 agents = 2,400 rows/day).
+- **Concurrent writes**: lead override + helper accept can race → use optimistic locking with `version` column OR row-level lock on `order_steps.id` before mutating.
+- **Validation**: SUM check enforced trong app layer (Go function `ValidateOrderStepSplits`), NOT in DB constraint (DB cannot easily enforce SUM across rows).
+- **Reconciliation**: daily job verify `SUM(order_step_agents.amount_earned) per order_step_id ≈ step_revenue` (small drift OK do rounding).
+
+---
+
+## 7.8 · v3.5+ Warranty packages (maintenance subscriptions) · DRAFT
+
+> 🆕 **New in v3.5+**: 2 loại warranty:
+> 1. **Embedded warranty** · cấp tự động khi order completed (1 tháng default) · đã có ở v3.4
+> 2. **Maintenance subscription packages** · KH mua gói trước (vd 12 tháng) cho 1 thiết bị, được vệ sinh định kỳ + sửa các issues whitelisted
+>
+> Schema này định nghĩa loại 2. Loại 1 vẫn dùng cơ chế cũ ở [Doc 19](../10-legal/19-service-guarantee-policy.md) + [Doc 15 Section L](../05-ba/15-business-rules.md).
+
+### 7.8.1 · Design principles
+
+1. **1 gói = 1 thiết bị** (customer_devices.id), KH có 2 máy lạnh → mua 2 gói
+2. **Quotas có giới hạn**: vd 4 lần vệ sinh/năm, max 1 lần/tháng
+3. **Covered repairs = whitelist**: liệt kê rõ issue_category được cover
+4. **Auto-suggest scheduling**: cron tạo suggestion mỗi N tháng cho cleaning quota chưa dùng
+5. **Deferred revenue accounting**: revenue recognized dần theo thời gian, không recognized full khi sale
+6. **No-charge orders**: claim → tạo order với `amount_charged = 0`, agent vẫn earn từ warranty fund
+
+### 7.8.2 · Catalog tables (DB: `smp_catalog`)
+
+#### `warranty_packages` · Gói bán được
+
+```sql
+CREATE TABLE smp_catalog.warranty_packages (
+  id                BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  package_code      VARCHAR(64) NOT NULL UNIQUE COMMENT 'wpkg_ac_basic_1y',
+  name              VARCHAR(255) NOT NULL COMMENT 'Bảo trì máy lạnh cơ bản 1 năm',
+  description       TEXT,
+  device_category   VARCHAR(64) NOT NULL COMMENT 'ac, washer, fridge, water_heater · 1 gói cho 1 category',
+  duration_months   SMALLINT UNSIGNED NOT NULL COMMENT '12, 24, 36...',
+  price             BIGINT UNSIGNED NOT NULL COMMENT 'Giá bán cho KH (VND minor)',
+  currency          CHAR(3) NOT NULL DEFAULT 'VND',
+  status            VARCHAR(16) NOT NULL DEFAULT 'active',
+  -- Display metadata
+  marketing_tag     VARCHAR(64) COMMENT 'best_seller, new, premium',
+  display_order     SMALLINT UNSIGNED DEFAULT 0,
+  -- Audit
+  created_at_utc    DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at_utc    DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT chk_wpkg_status CHECK (status IN ('active','deprecated','draft')),
+  CONSTRAINT chk_wpkg_duration CHECK (duration_months BETWEEN 1 AND 60),
+  INDEX idx_wpkg_category_status (device_category, status)
+) ENGINE=InnoDB COMMENT='Catalog of maintenance subscription packages';
+```
+
+#### `warranty_package_quotas` · Quotas trong gói
+
+```sql
+CREATE TABLE smp_catalog.warranty_package_quotas (
+  id                  BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  package_id          BIGINT UNSIGNED NOT NULL,
+  quota_type          VARCHAR(32) NOT NULL COMMENT 'cleaning | repair_basic | repair_full',
+  service_code        VARCHAR(64) NULL COMMENT 'FK to services.service_code · NULL for repair quotas',
+  count_total         SMALLINT UNSIGNED NOT NULL COMMENT 'Tổng số lần trong duration_months',
+  count_per_period    SMALLINT UNSIGNED NULL COMMENT 'Max per period (vd 1/month)',
+  period_days         SMALLINT UNSIGNED NULL COMMENT 'Period for count_per_period limit',
+  is_unlimited        BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'If TRUE, count_total ignored',
+  auto_suggest        BOOLEAN NOT NULL DEFAULT FALSE COMMENT 'Auto suggest scheduling',
+  suggest_interval_days SMALLINT UNSIGNED NULL COMMENT 'Vd 90 = mỗi 3 tháng',
+  notes               TEXT,
+  CONSTRAINT fk_wpq_pkg FOREIGN KEY (package_id) REFERENCES warranty_packages(id) ON DELETE CASCADE,
+  CONSTRAINT chk_wpq_type CHECK (quota_type IN ('cleaning','repair_basic','repair_full','inspection')),
+  INDEX idx_wpq_pkg (package_id)
+) ENGINE=InnoDB COMMENT='Quotas defined per package (cleaning count, repair count, etc.)';
+```
+
+#### `warranty_package_covered_issues` · Whitelist các issues được sửa free
+
+```sql
+CREATE TABLE smp_catalog.warranty_package_covered_issues (
+  id              BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  package_id      BIGINT UNSIGNED NOT NULL,
+  issue_category  VARCHAR(64) NOT NULL COMMENT 'capacitor, gas_refill, fan_motor, drainage',
+  issue_name      VARCHAR(255) COMMENT 'Display name to customer',
+  max_value       BIGINT UNSIGNED NULL COMMENT 'Trần chi per claim · NULL = no cap',
+  currency        CHAR(3) NOT NULL DEFAULT 'VND',
+  notes           TEXT,
+  CONSTRAINT fk_wpci_pkg FOREIGN KEY (package_id) REFERENCES warranty_packages(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_pkg_issue (package_id, issue_category),
+  INDEX idx_wpci_pkg (package_id)
+) ENGINE=InnoDB COMMENT='Whitelist of covered repair issues per package';
+```
+
+### 7.8.3 · Customer tables (DB: `smp_customer`)
+
+#### `customer_devices` · Thiết bị của KH (NEW)
+
+> Cần thiết để link 1 gói = 1 thiết bị. Nếu chưa có table này → tạo mới.
+
+```sql
+CREATE TABLE smp_customer.customer_devices (
+  id                BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  customer_id       BIGINT UNSIGNED NOT NULL COMMENT 'FK to customers (in inside)',
+  device_category   VARCHAR(64) NOT NULL COMMENT 'ac, washer, fridge, water_heater',
+  brand             VARCHAR(128) COMMENT 'Daikin, Panasonic, LG',
+  model             VARCHAR(128),
+  serial_no         VARCHAR(128),
+  install_date      DATE NULL COMMENT 'Ngày KH lắp đặt (declared by customer)',
+  install_location  VARCHAR(255) COMMENT 'Phòng khách, phòng ngủ chính, etc.',
+  notes             TEXT,
+  status            VARCHAR(16) NOT NULL DEFAULT 'active',
+  created_at_utc    DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at_utc    DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT chk_cd_status CHECK (status IN ('active','retired','transferred')),
+  INDEX idx_cd_customer (customer_id),
+  INDEX idx_cd_category (device_category, status)
+) ENGINE=InnoDB COMMENT='Customer-owned devices for warranty subscription tracking';
+```
+
+### 7.8.4 · Warranty execution tables (DB: `smp_warranty` · NEW DB)
+
+```sql
+CREATE DATABASE smp_warranty CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE smp_warranty;
+```
+
+#### `customer_warranties` · Gói KH đã mua
+
+```sql
+CREATE TABLE smp_warranty.customer_warranties (
+  id                  BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  customer_id         BIGINT UNSIGNED NOT NULL,
+  package_id          BIGINT UNSIGNED NOT NULL COMMENT 'FK to smp_catalog.warranty_packages',
+  device_id           BIGINT UNSIGNED NOT NULL COMMENT 'FK to smp_customer.customer_devices · 1 gói = 1 thiết bị',
+  purchase_order_id   BIGINT UNSIGNED NOT NULL COMMENT 'FK to smp_order.orders · order KH mua gói',
+  start_date_utc      DATETIME(3) NOT NULL,
+  end_date_utc        DATETIME(3) NOT NULL,
+  price_paid          BIGINT UNSIGNED NOT NULL COMMENT 'Snapshot of price (in case package price changes later)',
+  currency            CHAR(3) NOT NULL DEFAULT 'VND',
+  status              VARCHAR(16) NOT NULL DEFAULT 'active',
+  -- Denormalized quotas for fast read (source of truth = warranty_quota_balance)
+  remaining_quotas    JSON COMMENT '{"cleaning": 3, "repair_basic": 5}',
+  -- Deferred revenue accounting
+  total_amount_recognized  BIGINT UNSIGNED DEFAULT 0 COMMENT 'Revenue đã recognize tới thời điểm hiện tại',
+  next_recognition_date_utc DATETIME(3) COMMENT 'Cron tiếp theo ghi revenue',
+  -- Lifecycle
+  cancelled_at_utc    DATETIME(3) NULL,
+  cancelled_reason    VARCHAR(255) NULL,
+  refunded_amount     BIGINT UNSIGNED DEFAULT 0,
+  -- Audit
+  created_at_utc      DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  updated_at_utc      DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT chk_cw_status CHECK (status IN ('active','expired','cancelled','used_up','suspended')),
+  CONSTRAINT chk_cw_dates CHECK (end_date_utc > start_date_utc),
+  INDEX idx_cw_customer_status (customer_id, status),
+  INDEX idx_cw_device (device_id),
+  INDEX idx_cw_end_date (end_date_utc) COMMENT 'For expiry cron'
+) ENGINE=InnoDB COMMENT='Active maintenance subscriptions purchased by customers';
+```
+
+#### `warranty_quota_balance` · Source of truth cho quotas còn lại
+
+```sql
+CREATE TABLE smp_warranty.warranty_quota_balance (
+  id                BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  customer_warranty_id BIGINT UNSIGNED NOT NULL,
+  quota_type        VARCHAR(32) NOT NULL,
+  service_code      VARCHAR(64) NULL,
+  count_remaining   SMALLINT NOT NULL COMMENT 'Có thể negative nếu over-claim (audit case)',
+  count_used        SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  last_used_at_utc  DATETIME(3) NULL,
+  next_eligible_at_utc DATETIME(3) NULL COMMENT 'Per count_per_period rule',
+  updated_at_utc    DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3) ON UPDATE CURRENT_TIMESTAMP(3),
+  CONSTRAINT fk_wqb_warranty FOREIGN KEY (customer_warranty_id) REFERENCES customer_warranties(id) ON DELETE CASCADE,
+  UNIQUE KEY uniq_warranty_quota (customer_warranty_id, quota_type, service_code),
+  INDEX idx_wqb_warranty (customer_warranty_id)
+) ENGINE=InnoDB COMMENT='Per-warranty quota tracking · authoritative count';
+```
+
+#### `warranty_claims` · Mỗi lần KH dùng gói
+
+```sql
+CREATE TABLE smp_warranty.warranty_claims (
+  id                  BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  customer_warranty_id BIGINT UNSIGNED NOT NULL,
+  order_id            BIGINT UNSIGNED NULL COMMENT 'Order generated from this claim · NULL until approved',
+  claim_type          VARCHAR(32) NOT NULL COMMENT 'cleaning | repair_basic | repair_full',
+  service_code        VARCHAR(64) NULL COMMENT 'For cleaning quotas',
+  issue_category      VARCHAR(64) NULL COMMENT 'For repair claims · must match covered_issues',
+  issue_description   TEXT,
+  claimed_at_utc      DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  -- Approval
+  status              VARCHAR(16) NOT NULL DEFAULT 'pending',
+  approved_by         BIGINT UNSIGNED NULL,
+  approved_at_utc     DATETIME(3) NULL,
+  rejection_reason    VARCHAR(255) NULL,
+  -- Linked to actual service order (free-of-charge order)
+  completed_at_utc    DATETIME(3) NULL,
+  -- Cost tracking (for accounting · cost to SMP for this free service)
+  service_cost        BIGINT UNSIGNED NULL COMMENT 'Internal cost · agent payable + materials',
+  cost_currency       CHAR(3) DEFAULT 'VND',
+  CONSTRAINT fk_wc_warranty FOREIGN KEY (customer_warranty_id) REFERENCES customer_warranties(id),
+  CONSTRAINT chk_wc_status CHECK (status IN ('pending','approved','rejected','in_progress','completed','cancelled')),
+  CONSTRAINT chk_wc_type CHECK (claim_type IN ('cleaning','repair_basic','repair_full','inspection')),
+  INDEX idx_wc_warranty (customer_warranty_id),
+  INDEX idx_wc_order (order_id),
+  INDEX idx_wc_status_claimed (status, claimed_at_utc)
+) ENGINE=InnoDB COMMENT='Customer claims against active warranties';
+```
+
+#### `warranty_revenue_recognition` · Lịch ghi nhận doanh thu hàng tháng
+
+```sql
+CREATE TABLE smp_warranty.warranty_revenue_recognition (
+  id                  BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  customer_warranty_id BIGINT UNSIGNED NOT NULL,
+  recognition_date_utc DATETIME(3) NOT NULL COMMENT 'Date this revenue chunk recognized',
+  amount              BIGINT UNSIGNED NOT NULL COMMENT 'Revenue chunk · usually price/duration_months',
+  currency            CHAR(3) NOT NULL DEFAULT 'VND',
+  journal_entry_id    BIGINT UNSIGNED NULL COMMENT 'FK to journal_entries · NULL until posted',
+  posted_at_utc       DATETIME(3) NULL,
+  CONSTRAINT fk_wrr_warranty FOREIGN KEY (customer_warranty_id) REFERENCES customer_warranties(id),
+  INDEX idx_wrr_date_posted (recognition_date_utc, posted_at_utc) COMMENT 'For cron'
+) ENGINE=InnoDB COMMENT='Monthly revenue recognition schedule (deferred revenue → revenue)';
+```
+
+### 7.8.5 · ALTER existing tables
+
+```sql
+-- Link order to warranty claim (if free-of-charge order)
+ALTER TABLE smp_order.orders
+  ADD COLUMN warranty_claim_id BIGINT UNSIGNED NULL COMMENT 'NULL = normal paid order; not NULL = warranty claim order (free)',
+  ADD COLUMN is_warranty_order BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD INDEX idx_orders_warranty_claim (warranty_claim_id);
+
+-- Add accounts to Chart of Accounts (Doc 16 §1)
+INSERT INTO smp_finance.accounts (account_code, name, account_type, is_balance_sheet) VALUES
+  ('deferred_revenue', 'Doanh thu chưa thực hiện (gói BH)', 'liability', TRUE),
+  ('revenue_warranty_subscription', 'Doanh thu thuê bao BH', 'revenue', FALSE),
+  ('warranty_service_cost', 'Chi phí dịch vụ BH', 'expense', FALSE);
+```
+
+### 7.8.6 · Example scenario
+
+KH "Anh Nguyễn A" có 2 máy lạnh, mua 2 gói "Bảo trì AC cơ bản 1 năm" giá 1,200,000 VND/gói:
+
+```text
+1. Tạo customer_devices:
+   device_1: AC1 phòng khách (Daikin) → device_id=101
+   device_2: AC2 phòng ngủ (Panasonic) → device_id=102
+
+2. KH mua 2 gói qua order O-001 = 2,400,000 VND
+   warranty_1: package=wpkg_ac_basic_1y, device_id=101, start=2026-06-01, end=2027-06-01
+   warranty_2: package=wpkg_ac_basic_1y, device_id=102, start=2026-06-01, end=2027-06-01
+
+3. Mỗi gói init quotas:
+   warranty_quota_balance:
+     - warranty_1: cleaning x4, repair_basic x6
+     - warranty_2: cleaning x4, repair_basic x6
+
+4. Tháng 7 (1 tháng sau mua), KH yêu cầu vệ sinh AC1:
+   - Tạo warranty_claim: claim_type='cleaning', service_code='svc_ac_periodic_clean'
+   - Quota check: warranty_1.cleaning > 0 → approve
+   - Tạo order O-050 với amount_charged=0, is_warranty_order=TRUE
+   - Sau khi step completed: warranty_quota_balance.count_remaining --
+   - Cost: 200k VND (agent payable) → ghi vào warranty_service_cost
+   
+5. Cron auto-suggest:
+   - Tháng 10, warranty_1.cleaning vẫn còn 3 → suggest KH đặt lịch
+   - Push notification: "Đã 3 tháng từ lần vệ sinh trước, đặt lịch ngay?"
+```
+
+### 7.8.7 · Migration plan
+
+| Phase | Action |
+|---|---|
+| v3.5 Sprint 1 | Create `smp_catalog.warranty_packages` + quotas + covered_issues tables |
+| v3.5 Sprint 1 | Create `smp_customer.customer_devices` (if not exists) |
+| v3.5 Sprint 1 | Create `smp_warranty` DB + 4 tables |
+| v3.5 Sprint 1 | Insert 3 new accounts vào Chart of Accounts |
+| v3.5 Sprint 2 | Implement `pkg/warranty` package (quota check, claim approval) |
+| v3.5 Sprint 2 | Implement deferred revenue recognition cron job |
+| v3.5 Sprint 3 | Build APIs (purchase, claim, quota check) |
+| v3.5 Sprint 3 | Customer mobile UI · gói catalog + my warranties |
+| v3.5 Sprint 4 | Admin Web · package management page |
+| v3.6 | Auto-suggest scheduling cron |
+| v3.6 | Renewal flow · expire 7d before notify |
+
+### 7.8.8 · Operational notes
+
+- **Cardinality**: 1000 customers × 2 devices × 1 active warranty = 2000 warranties. Quota balance ~5 rows per warranty = 10k rows. Acceptable.
+- **Concurrent quota updates**: claim approval + cancellation can race → use row-level lock on `warranty_quota_balance.id` + optimistic version.
+- **Revenue recognition cron**: nightly job · process `next_recognition_date_utc <= NOW()` · idempotent via `journal_entry_id` link.
+- **Refund handling**: if KH cancel gói (vd trong 7 days cooling off period) → refund proportional remaining duration, reverse deferred_revenue, log `cancelled_reason`.
+- **Backup**: same as financial data · 10-year retention (`smp_warranty` is financial-adjacent).
+
+---
+
 ## 8. MongoDB collections
 
 ### `smp_events` (integration-svc)

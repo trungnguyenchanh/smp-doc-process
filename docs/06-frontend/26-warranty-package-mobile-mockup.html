@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMP Warranty Packages · Mobile UX Mockup · v3.5+</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --indigo: #4F46E5;
+  --indigo-dark: #3730A3;
+  --indigo-light: #E0E7FF;
+  --green: #10B981;
+  --green-dark: #059669;
+  --green-light: #D1FAE5;
+  --orange: #F59E0B;
+  --orange-light: #FEF3C7;
+  --red: #EF4444;
+  --red-light: #FEE2E2;
+  --cyan: #06B6D4;
+  --cyan-light: #CFFAFE;
+  --purple: #8B5CF6;
+  --purple-light: #EDE9FE;
+  --gray-900: #111827;
+  --gray-700: #374151;
+  --gray-500: #6B7280;
+  --gray-300: #D1D5DB;
+  --gray-100: #F3F4F6;
+  --gray-50:  #F9FAFB;
+  --white: #FFFFFF;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: linear-gradient(135deg, #f5f7fb 0%, #e8edf5 100%);
+  min-height: 100vh;
+  color: var(--gray-900);
+  padding: 32px 16px;
+}
+.page-header {
+  max-width: 1400px;
+  margin: 0 auto 32px;
+  text-align: center;
+}
+.page-header h1 {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--indigo);
+  margin-bottom: 8px;
+  letter-spacing: -0.5px;
+}
+.page-header p {
+  color: var(--gray-500);
+  font-size: 14px;
+}
+.flow-section {
+  max-width: 1400px;
+  margin: 0 auto 48px;
+}
+.flow-section h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  padding-left: 16px;
+  border-left: 4px solid var(--indigo);
+  color: var(--gray-900);
+}
+.flow-section .flow-desc {
+  margin: 0 0 24px 16px;
+  color: var(--gray-500);
+  font-size: 13px;
+}
+.phones-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 32px;
+  justify-items: center;
+}
+
+.phone {
+  width: 340px;
+  background: var(--gray-900);
+  border-radius: 40px;
+  padding: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2), 0 8px 24px rgba(0,0,0,0.12);
+  position: relative;
+  margin-bottom: 48px;
+}
+.phone-screen {
+  background: white;
+  border-radius: 32px;
+  overflow: hidden;
+  height: 700px;
+  display: flex;
+  flex-direction: column;
+}
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 24px 4px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--gray-100);
+}
+.app-header .back, .app-header .info {
+  background: none; border: none;
+  font-size: 18px; cursor: pointer;
+  color: var(--gray-700);
+}
+.app-header h2 {
+  font-size: 16px;
+  font-weight: 700;
+  flex: 1;
+  text-align: center;
+}
+.content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+.content::-webkit-scrollbar { display: none; }
+.screen-label {
+  position: absolute;
+  bottom: -36px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--gray-700);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  font-weight: 700;
+  margin: 16px 0 8px;
+}
+
+.footer-action {
+  padding: 12px 16px;
+  border-top: 1px solid var(--gray-100);
+}
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: var(--indigo);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(79,70,229,0.3);
+}
+.btn-success {
+  background: var(--green);
+  box-shadow: 0 4px 12px rgba(16,185,129,0.3);
+}
+.btn-outline {
+  background: white;
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+  box-shadow: none;
+}
+
+/* Package card */
+.pkg-card {
+  border: 1px solid var(--gray-100);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pkg-card:hover {
+  border-color: var(--indigo);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+.pkg-card.premium {
+  border-color: var(--purple);
+  background: linear-gradient(135deg, #faf7ff 0%, white 50%);
+}
+.pkg-card .tag-line {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 12px 0;
+}
+.pkg-card .tag {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pkg-card .tag.best { background: var(--green-light); color: var(--green-dark); }
+.pkg-card .tag.premium { background: var(--purple-light); color: var(--purple); }
+.pkg-card .body { padding: 12px 16px 16px; }
+.pkg-card .icon-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.pkg-card .icon { font-size: 28px; }
+.pkg-card .title { font-weight: 700; font-size: 16px; }
+.pkg-card .price-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 10px 0;
+}
+.pkg-card .price {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--indigo);
+}
+.pkg-card .duration {
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.pkg-card .features {
+  list-style: none;
+  padding: 0;
+}
+.pkg-card .features li {
+  font-size: 12px;
+  padding: 4px 0;
+  display: flex;
+  gap: 6px;
+  color: var(--gray-700);
+}
+.pkg-card .features li::before {
+  content: '✓';
+  color: var(--green);
+  font-weight: 700;
+}
+
+/* Device card */
+.device-card {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--gray-100);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  background: white;
+  cursor: pointer;
+}
+.device-card.selected {
+  border-color: var(--indigo);
+  background: var(--indigo-light);
+}
+.device-card .device-icon {
+  width: 48px; height: 48px;
+  background: var(--gray-100);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+}
+.device-card.selected .device-icon {
+  background: var(--indigo);
+  color: white;
+}
+.device-card .device-info { flex: 1; }
+.device-card .device-name { font-weight: 600; font-size: 14px; }
+.device-card .device-meta { font-size: 11px; color: var(--gray-500); margin-top: 2px; }
+.device-card .radio {
+  width: 20px; height: 20px;
+  border: 2px solid var(--gray-300);
+  border-radius: 50%;
+  align-self: center;
+}
+.device-card.selected .radio {
+  border-color: var(--indigo);
+  background: radial-gradient(circle, var(--indigo) 0% 50%, white 50%);
+}
+
+/* Package detail */
+.pkg-hero {
+  background: linear-gradient(135deg, var(--indigo) 0%, var(--indigo-dark) 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 16px;
+  margin-bottom: 16px;
+}
+.pkg-hero .name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.pkg-hero .subtitle { font-size: 12px; opacity: 0.85; margin-bottom: 12px; }
+.pkg-hero .price-big {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 32px;
+  font-weight: 800;
+}
+.pkg-hero .vat-note { font-size: 11px; opacity: 0.7; margin-top: 4px; }
+
+.quota-card {
+  background: var(--green-light);
+  border-left: 4px solid var(--green);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+.quota-card .quota-label { font-size: 11px; color: var(--green-dark); font-weight: 600; text-transform: uppercase; }
+.quota-card .quota-value { font-size: 14px; color: var(--gray-900); font-weight: 600; margin-top: 4px; }
+
+.issue-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px dashed var(--gray-100);
+  font-size: 12px;
+}
+.issue-row:last-child { border-bottom: none; }
+.issue-row .name { color: var(--gray-700); }
+.issue-row .max {
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--gray-500);
+  font-size: 11px;
+}
+
+.exclusion-card {
+  background: var(--red-light);
+  border-left: 4px solid var(--red);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+.exclusion-card .label {
+  font-size: 11px;
+  color: var(--red);
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.exclusion-card ul {
+  list-style: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--gray-700);
+}
+.exclusion-card li {
+  padding: 2px 0;
+  display: flex;
+  gap: 6px;
+}
+.exclusion-card li::before { content: '✕'; color: var(--red); }
+
+/* Purchase summary */
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  font-size: 13px;
+  border-bottom: 1px dashed var(--gray-100);
+}
+.summary-row:last-child { border-bottom: none; }
+.summary-row.total {
+  font-weight: 700;
+  font-size: 16px;
+  padding-top: 14px;
+  border-top: 2px solid var(--gray-300);
+  margin-top: 8px;
+}
+.summary-row .value {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.term-checkbox {
+  display: flex;
+  gap: 10px;
+  padding: 12px;
+  background: var(--orange-light);
+  border-radius: 8px;
+  margin: 12px 0;
+  font-size: 12px;
+  align-items: flex-start;
+}
+.term-checkbox input { margin-top: 2px; accent-color: var(--orange); }
+.term-checkbox label { color: var(--gray-700); line-height: 1.4; }
+.term-checkbox a { color: var(--indigo); font-weight: 600; }
+
+/* My warranties */
+.warranty-card {
+  border: 1px solid var(--gray-100);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background: white;
+}
+.warranty-card .header {
+  padding: 12px 16px;
+  background: var(--indigo);
+  color: white;
+}
+.warranty-card .header .name { font-size: 14px; font-weight: 700; }
+.warranty-card .header .device { font-size: 11px; opacity: 0.9; margin-top: 2px; }
+.warranty-card .body { padding: 12px 16px; }
+.warranty-card .dates {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 11px;
+  color: var(--gray-500);
+}
+.warranty-card .dates .days-left {
+  background: var(--green-light);
+  color: var(--green-dark);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.quota-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.quota-pill {
+  background: var(--gray-50);
+  padding: 10px;
+  border-radius: 8px;
+  text-align: center;
+}
+.quota-pill .label { font-size: 10px; color: var(--gray-500); font-weight: 600; text-transform: uppercase; }
+.quota-pill .count {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--indigo);
+  margin: 2px 0;
+}
+.quota-pill .max { font-size: 10px; color: var(--gray-500); }
+
+/* Claim form */
+.issue-radio-group {
+  margin-bottom: 12px;
+}
+.issue-radio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--gray-100);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.issue-radio.selected {
+  border-color: var(--indigo);
+  background: var(--indigo-light);
+}
+.issue-radio .icon { font-size: 18px; }
+.issue-radio .body { flex: 1; }
+.issue-radio .name { font-weight: 600; font-size: 13px; }
+.issue-radio .max { font-size: 11px; color: var(--gray-500); margin-top: 1px; }
+.issue-radio input[type="radio"] { accent-color: var(--indigo); }
+
+.coverage-banner {
+  background: var(--green-light);
+  border-left: 4px solid var(--green);
+  padding: 12px;
+  border-radius: 8px;
+  margin: 12px 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.coverage-banner .icon { font-size: 18px; }
+.coverage-banner .text { font-size: 12px; color: var(--green-dark); }
+.coverage-banner .text strong { display: block; margin-bottom: 2px; }
+
+.not-covered-banner {
+  background: var(--red-light);
+  border-left: 4px solid var(--red);
+  padding: 12px;
+  border-radius: 8px;
+  margin: 12px 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+.not-covered-banner .icon { font-size: 18px; }
+.not-covered-banner .text { font-size: 12px; color: var(--red); }
+.not-covered-banner .text strong { display: block; margin-bottom: 4px; }
+
+/* Photo upload */
+.photo-upload-row {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0;
+}
+.photo-thumb {
+  width: 80px; height: 80px;
+  border-radius: 8px;
+  background: var(--gray-100);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  position: relative;
+  cursor: pointer;
+}
+.photo-thumb.add {
+  border: 2px dashed var(--gray-300);
+  color: var(--gray-500);
+}
+.photo-thumb img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
+
+/* Pending status card */
+.status-card {
+  background: linear-gradient(135deg, var(--orange) 0%, #ea7c12 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 16px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+.status-card .icon { font-size: 48px; margin-bottom: 8px; }
+.status-card .title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.status-card .desc { font-size: 13px; opacity: 0.9; }
+.status-card .eta {
+  font-size: 11px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255,255,255,0.3);
+  opacity: 0.85;
+}
+
+input[type="text"], input[type="date"], select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--indigo);
+}
+label { font-size: 12px; color: var(--gray-700); font-weight: 600; display: block; margin-bottom: 4px; margin-top: 8px; }
+
+@media (max-width: 720px) {
+  .phones-grid { grid-template-columns: 1fr; }
+  .phone { width: 100%; max-width: 360px; }
+}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <h1>SMP · Warranty Package Mobile UX</h1>
+  <p>Interactive mockup · Purchase flow + Claim flow · Sprint 3-4 milestone · v3.5+</p>
+</div>
+
+<!-- ============ FLOW 1: PURCHASE ============ -->
+<div class="flow-section">
+  <h2>Flow 1 · Mua gói bảo hành</h2>
+  <p class="flow-desc">User journey: Browse catalog → Choose device → Review terms → Pay → Confirmation</p>
+
+  <div class="phones-grid">
+
+    <!-- Screen 1: Catalog -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>10:42</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Gói bảo trì</h2>
+          <button class="info">⋯</button>
+        </div>
+        <div class="content">
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">
+            Chọn gói phù hợp với thiết bị nhà bạn. Vệ sinh định kỳ + sửa miễn phí trong hạn.
+          </p>
+
+          <div class="section-title">Cho máy lạnh</div>
+
+          <div class="pkg-card">
+            <div class="tag-line"><span class="tag best">Best seller</span></div>
+            <div class="body">
+              <div class="icon-row">
+                <span class="icon">❄️</span>
+                <span class="title">AC Basic 1 năm</span>
+              </div>
+              <div class="price-line">
+                <span class="price">1.200.000₫</span>
+                <span class="duration">12 tháng</span>
+              </div>
+              <ul class="features">
+                <li>4 lần vệ sinh định kỳ</li>
+                <li>4 lần sửa miễn phí</li>
+                <li>Bảo hành tay nghề</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="pkg-card premium">
+            <div class="tag-line"><span class="tag premium">Premium</span></div>
+            <div class="body">
+              <div class="icon-row">
+                <span class="icon">❄️</span>
+                <span class="title">AC Premium 1 năm</span>
+              </div>
+              <div class="price-line">
+                <span class="price">1.800.000₫</span>
+                <span class="duration">12 tháng</span>
+              </div>
+              <ul class="features">
+                <li>4 lần vệ sinh + 8 lần sửa</li>
+                <li>Ưu tiên dispatch giờ vàng</li>
+                <li>24/7 phone support</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="section-title">Cho máy giặt</div>
+
+          <div class="pkg-card">
+            <div class="body">
+              <div class="icon-row">
+                <span class="icon">🧺</span>
+                <span class="title">Washer Basic 1 năm</span>
+              </div>
+              <div class="price-line">
+                <span class="price">800.000₫</span>
+                <span class="duration">12 tháng</span>
+              </div>
+              <ul class="features">
+                <li>2 lần vệ sinh + 3 lần sửa</li>
+                <li>Cover: belt, drainage pump, door seal</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Screen 1 · Browse catalog</div>
+    </div>
+
+    <!-- Screen 2: Choose device -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>10:43</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Chọn thiết bị</h2>
+          <button class="info"> </button>
+        </div>
+        <div class="content">
+          <p style="font-size:13px;color:var(--gray-500);margin-bottom:12px">
+            Gói "AC Basic" áp dụng cho 1 thiết bị. Chọn máy lạnh nào của bạn.
+          </p>
+
+          <div class="device-card selected">
+            <div class="device-icon">❄️</div>
+            <div class="device-info">
+              <div class="device-name">Daikin FTKZ25NVMV</div>
+              <div class="device-meta">Phòng khách · Lắp 2024 · Serial DKZ-12345</div>
+            </div>
+            <div class="radio"></div>
+          </div>
+
+          <div class="device-card">
+            <div class="device-icon">❄️</div>
+            <div class="device-info">
+              <div class="device-name">Panasonic CS-PU9TKH</div>
+              <div class="device-meta">Phòng ngủ chính · Lắp 2023</div>
+            </div>
+            <div class="radio"></div>
+          </div>
+
+          <button style="width:100%;padding:14px;background:transparent;border:2px dashed var(--indigo);color:var(--indigo);border-radius:12px;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;margin-top:8px">
+            ➕ Thêm thiết bị mới
+          </button>
+
+          <div style="background:var(--orange-light);padding:10px 12px;border-radius:8px;font-size:11px;color:#9a5b00;margin-top:16px;line-height:1.4">
+            ⚠️ Không hỗ trợ gói cho thiết bị > 10 năm tuổi (kiểm tra theo install_date)
+          </div>
+        </div>
+        <div class="footer-action">
+          <button class="btn-primary">Tiếp tục</button>
+        </div>
+      </div>
+      <div class="screen-label">Screen 2 · Choose device</div>
+    </div>
+
+    <!-- Screen 3: Package detail + terms -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>10:44</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Chi tiết gói</h2>
+          <button class="info"> </button>
+        </div>
+        <div class="content">
+          <div class="pkg-hero">
+            <div class="name">AC Basic 1 năm</div>
+            <div class="subtitle">Cho Daikin FTKZ25NVMV (phòng khách)</div>
+            <div class="price-big">1.200.000₫</div>
+            <div class="vat-note">Đã bao gồm VAT 8%</div>
+          </div>
+
+          <div class="section-title">Quyền lợi</div>
+
+          <div class="quota-card">
+            <div class="quota-label">🧹 Vệ sinh định kỳ</div>
+            <div class="quota-value">4 lần / năm (1 lần / 3 tháng)</div>
+          </div>
+
+          <div class="quota-card">
+            <div class="quota-label">🔧 Sửa chữa miễn phí</div>
+            <div class="quota-value">4 lần / năm (1 lần / tháng)</div>
+          </div>
+
+          <div class="section-title">Lỗi được sửa miễn phí</div>
+
+          <div style="background:white;border:1px solid var(--gray-100);border-radius:12px;padding:12px">
+            <div class="issue-row">
+              <span class="name">Tụ điện máy lạnh</span>
+              <span class="max">tối đa 300k</span>
+            </div>
+            <div class="issue-row">
+              <span class="name">Nạp gas bổ sung (&lt; 0.5kg)</span>
+              <span class="max">tối đa 500k</span>
+            </div>
+            <div class="issue-row">
+              <span class="name">Quạt dàn lạnh/nóng</span>
+              <span class="max">tối đa 400k</span>
+            </div>
+            <div class="issue-row">
+              <span class="name">Đường thoát nước</span>
+              <span class="max">tối đa 200k</span>
+            </div>
+            <div class="issue-row">
+              <span class="name">Cảm biến nhiệt</span>
+              <span class="max">tối đa 250k</span>
+            </div>
+            <div class="issue-row">
+              <span class="name">Remote điều khiển</span>
+              <span class="max">tối đa 150k</span>
+            </div>
+          </div>
+
+          <div class="exclusion-card">
+            <div class="label">Không cover (cần đặt order riêng)</div>
+            <ul>
+              <li>Thay block/máy nén</li>
+              <li>Thay máy mới</li>
+              <li>Hư do thiên tai, sử dụng sai</li>
+              <li>Máy &gt; 10 năm tuổi</li>
+            </ul>
+          </div>
+
+          <div style="background:var(--gray-50);padding:10px 12px;border-radius:8px;font-size:11px;color:var(--gray-500);margin-top:12px;line-height:1.5">
+            ⓘ Đây là gói thuê bao dịch vụ bảo trì, không phải hợp đồng bảo hiểm.
+            Có thể cancel trong 7 ngày đầu để được hoàn 100% (cooling-off).
+          </div>
+        </div>
+        <div class="footer-action">
+          <button class="btn-primary">Mua ngay · 1.200.000₫</button>
+        </div>
+      </div>
+      <div class="screen-label">Screen 3 · Package detail</div>
+    </div>
+
+    <!-- Screen 4: Confirm purchase -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>10:45</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Xác nhận mua</h2>
+          <button class="info"> </button>
+        </div>
+        <div class="content">
+          <div style="background:white;border:1px solid var(--gray-100);border-radius:12px;padding:14px;margin-bottom:12px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:4px">AC Basic 1 năm</div>
+            <div style="font-size:11px;color:var(--gray-500)">Daikin FTKZ25NVMV · Phòng khách</div>
+          </div>
+
+          <div class="section-title">Thời hạn</div>
+          <div style="background:white;border:1px solid var(--gray-100);border-radius:12px;padding:14px;margin-bottom:12px">
+            <div class="summary-row">
+              <span>Bắt đầu</span>
+              <span class="value">15/06/2026</span>
+            </div>
+            <div class="summary-row">
+              <span>Hết hạn</span>
+              <span class="value">15/06/2027</span>
+            </div>
+          </div>
+
+          <div class="section-title">Thanh toán</div>
+          <div style="background:white;border:1px solid var(--gray-100);border-radius:12px;padding:14px;margin-bottom:12px">
+            <div class="summary-row">
+              <span>Giá gói (net)</span>
+              <span class="value">1.111.111₫</span>
+            </div>
+            <div class="summary-row">
+              <span>VAT 8%</span>
+              <span class="value">88.889₫</span>
+            </div>
+            <div class="summary-row total">
+              <span>Tổng</span>
+              <span class="value">1.200.000₫</span>
+            </div>
+          </div>
+
+          <div class="section-title">Phương thức</div>
+          <div style="background:white;border:1px solid var(--indigo);border-radius:12px;padding:14px;display:flex;align-items:center;gap:10px;background:var(--indigo-light)">
+            <span style="font-size:24px">💳</span>
+            <div style="flex:1">
+              <div style="font-weight:600;font-size:13px">VNPay Gateway</div>
+              <div style="font-size:11px;color:var(--gray-500)">Visa **** 4567</div>
+            </div>
+            <span style="color:var(--indigo);font-weight:700">✓</span>
+          </div>
+
+          <div class="term-checkbox">
+            <input type="checkbox" id="agree" checked>
+            <label for="agree">
+              Tôi đã đọc và đồng ý <a href="#">Điều khoản gói bảo trì</a>,
+              hiểu rõ về quyền cancel trong 7 ngày, và các trường hợp loại trừ.
+            </label>
+          </div>
+        </div>
+        <div class="footer-action">
+          <button class="btn-primary btn-success">Thanh toán 1.200.000₫</button>
+        </div>
+      </div>
+      <div class="screen-label">Screen 4 · Confirm + pay</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ============ FLOW 2: MY WARRANTIES + CLAIM ============ -->
+<div class="flow-section">
+  <h2>Flow 2 · Quản lý gói + Tạo claim</h2>
+  <p class="flow-desc">User journey: View my warranties → Open claim → Select issue (whitelist check) → Submit</p>
+
+  <div class="phones-grid">
+
+    <!-- Screen 5: My warranties -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:20</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Gói của tôi</h2>
+          <button class="info">+</button>
+        </div>
+        <div class="content">
+          <div class="warranty-card">
+            <div class="header">
+              <div class="name">AC Basic 1 năm</div>
+              <div class="device">Daikin · Phòng khách</div>
+            </div>
+            <div class="body">
+              <div class="dates">
+                <span>15/06/2026 → 15/06/2027</span>
+                <span class="days-left">280 ngày còn lại</span>
+              </div>
+              <div class="quota-grid">
+                <div class="quota-pill">
+                  <div class="label">🧹 Vệ sinh</div>
+                  <div class="count">3</div>
+                  <div class="max">/ 4 lần</div>
+                </div>
+                <div class="quota-pill">
+                  <div class="label">🔧 Sửa</div>
+                  <div class="count">4</div>
+                  <div class="max">/ 4 lần</div>
+                </div>
+              </div>
+              <button class="btn-primary" style="width:100%;padding:12px;font-size:14px">Sử dụng gói</button>
+            </div>
+          </div>
+
+          <div class="warranty-card">
+            <div class="header" style="background:var(--purple)">
+              <div class="name">Washer Basic 1 năm</div>
+              <div class="device">LG · Khu giặt</div>
+            </div>
+            <div class="body">
+              <div class="dates">
+                <span>01/03/2026 → 01/03/2027</span>
+                <span class="days-left">175 ngày còn lại</span>
+              </div>
+              <div class="quota-grid">
+                <div class="quota-pill">
+                  <div class="label">🧹 Vệ sinh</div>
+                  <div class="count">1</div>
+                  <div class="max">/ 2 lần</div>
+                </div>
+                <div class="quota-pill">
+                  <div class="label">🔧 Sửa</div>
+                  <div class="count">2</div>
+                  <div class="max">/ 3 lần</div>
+                </div>
+              </div>
+              <button class="btn-primary" style="width:100%;padding:12px;font-size:14px;background:var(--purple)">Sử dụng gói</button>
+            </div>
+          </div>
+
+          <button style="width:100%;padding:14px;background:transparent;border:2px dashed var(--gray-300);color:var(--gray-500);border-radius:12px;font-family:inherit;font-weight:600;font-size:13px;cursor:pointer;margin-top:8px">
+            ➕ Mua thêm gói
+          </button>
+        </div>
+      </div>
+      <div class="screen-label">Screen 5 · My warranties</div>
+    </div>
+
+    <!-- Screen 6: Choose claim type -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:21</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Loại yêu cầu</h2>
+          <button class="info"> </button>
+        </div>
+        <div class="content">
+          <div style="background:var(--indigo-light);padding:12px;border-radius:12px;margin-bottom:16px">
+            <div style="font-size:11px;color:var(--indigo-dark);font-weight:600;text-transform:uppercase;margin-bottom:4px">Gói đang dùng</div>
+            <div style="font-size:14px;font-weight:600">AC Basic 1 năm · Daikin phòng khách</div>
+          </div>
+
+          <div class="section-title">Bạn cần gì?</div>
+
+          <div style="border:2px solid var(--green);background:var(--green-light);border-radius:12px;padding:16px;margin-bottom:8px;cursor:pointer">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="font-size:32px">🧹</span>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:14px;color:var(--green-dark)">Vệ sinh định kỳ</div>
+                <div style="font-size:12px;color:var(--gray-700);margin-top:4px">Còn 3/4 lần · auto-approve</div>
+                <div style="background:white;padding:6px 10px;border-radius:6px;margin-top:8px;font-size:11px;color:var(--green-dark);font-weight:600;display:inline-block">
+                  ✓ Lần gần nhất: 3 tháng trước
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="border:1px solid var(--gray-100);background:white;border-radius:12px;padding:16px;margin-bottom:8px;cursor:pointer">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="font-size:32px">🔧</span>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:14px">Sửa chữa</div>
+                <div style="font-size:12px;color:var(--gray-700);margin-top:4px">Còn 4/4 lần · cần Ops duyệt</div>
+                <div style="background:var(--orange-light);padding:6px 10px;border-radius:6px;margin-top:8px;font-size:11px;color:var(--orange);font-weight:600;display:inline-block">
+                  ⓘ Chỉ cover các lỗi whitelisted
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="border:1px solid var(--gray-100);background:var(--gray-50);border-radius:12px;padding:16px;cursor:pointer">
+            <div style="display:flex;gap:10px;align-items:flex-start">
+              <span style="font-size:32px;filter:grayscale(1)">🔍</span>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:14px;color:var(--gray-700)">Kiểm tra tổng thể</div>
+                <div style="font-size:12px;color:var(--gray-500);margin-top:4px">Chỉ Premium · upgrade?</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Screen 6 · Choose claim type</div>
+    </div>
+
+    <!-- Screen 7: Repair claim form -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:23</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Yêu cầu sửa</h2>
+          <button class="info"> </button>
+        </div>
+        <div class="content">
+          <div class="section-title">Lỗi gặp phải</div>
+          <p style="font-size:11px;color:var(--gray-500);margin-bottom:8px">
+            Chỉ các lỗi sau được cover free trong gói AC Basic
+          </p>
+
+          <div class="issue-radio-group">
+            <label class="issue-radio selected">
+              <input type="radio" name="issue" checked>
+              <span class="icon">⚡</span>
+              <div class="body">
+                <div class="name">Tụ điện máy lạnh</div>
+                <div class="max">tối đa 300.000₫</div>
+              </div>
+            </label>
+
+            <label class="issue-radio">
+              <input type="radio" name="issue">
+              <span class="icon">💨</span>
+              <div class="body">
+                <div class="name">Nạp gas bổ sung</div>
+                <div class="max">tối đa 500.000₫</div>
+              </div>
+            </label>
+
+            <label class="issue-radio">
+              <input type="radio" name="issue">
+              <span class="icon">🌪️</span>
+              <div class="body">
+                <div class="name">Quạt dàn lạnh/nóng</div>
+                <div class="max">tối đa 400.000₫</div>
+              </div>
+            </label>
+
+            <label class="issue-radio">
+              <input type="radio" name="issue">
+              <span class="icon">💧</span>
+              <div class="body">
+                <div class="name">Đường thoát nước</div>
+                <div class="max">tối đa 200.000₫</div>
+              </div>
+            </label>
+
+            <label class="issue-radio">
+              <input type="radio" name="issue">
+              <span class="icon">📡</span>
+              <div class="body">
+                <div class="name">Remote điều khiển</div>
+                <div class="max">tối đa 150.000₫</div>
+              </div>
+            </label>
+          </div>
+
+          <button style="width:100%;padding:10px;background:var(--gray-50);border:1px solid var(--gray-100);color:var(--gray-700);border-radius:8px;font-family:inherit;font-size:12px;cursor:pointer">
+            Lỗi không có trong danh sách? →
+          </button>
+
+          <label style="margin-top:16px">Mô tả chi tiết</label>
+          <textarea rows="3" placeholder="Máy lạnh không khởi động, nghi tụ điện hỏng..."></textarea>
+
+          <label>Ảnh minh chứng (tùy chọn)</label>
+          <div class="photo-upload-row">
+            <div class="photo-thumb">📷</div>
+            <div class="photo-thumb">📷</div>
+            <div class="photo-thumb add">+</div>
+          </div>
+        </div>
+        <div class="footer-action">
+          <button class="btn-primary">Gửi yêu cầu</button>
+        </div>
+      </div>
+      <div class="screen-label">Screen 7 · Repair claim form</div>
+    </div>
+
+    <!-- Screen 8: Not covered warning -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:24</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Lỗi khác</h2>
+          <button class="info"> </button>
+        </div>
+        <div class="content">
+          <label>Mô tả lỗi của bạn</label>
+          <textarea rows="3" placeholder="Vd: Máy lạnh không lạnh dù đã bật, nghi compressor..."></textarea>
+
+          <label>Hệ thống tự nhận diện</label>
+          <div style="background:var(--gray-50);padding:14px;border-radius:12px;margin:8px 0">
+            <div style="font-size:11px;color:var(--gray-500);font-weight:600;text-transform:uppercase;margin-bottom:4px">AI suggestion</div>
+            <div style="font-size:14px;font-weight:600;color:var(--gray-900)">Possible issue: compressor failure</div>
+            <div style="font-size:11px;color:var(--gray-500);margin-top:4px">Confidence: 78%</div>
+          </div>
+
+          <div class="not-covered-banner">
+            <span class="icon">⚠️</span>
+            <div class="text">
+              <strong>Không trong scope gói</strong>
+              "Thay compressor" không nằm trong các lỗi miễn phí của gói AC Basic.
+              Bạn có thể đặt order trả phí với mức giá thông thường.
+            </div>
+          </div>
+
+          <div style="background:white;border:1px solid var(--gray-100);border-radius:12px;padding:14px;margin:8px 0">
+            <div style="font-weight:600;font-size:13px;margin-bottom:4px">Đặt order trả phí</div>
+            <div style="font-size:11px;color:var(--gray-500);margin-bottom:8px">Thay compressor · Daikin FTKZ25NVMV</div>
+            <div style="display:flex;justify-content:space-between;font-size:12px">
+              <span>Giá ước tính</span>
+              <span style="font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--indigo)">2.500.000₫ - 4.000.000₫</span>
+            </div>
+            <div style="font-size:10px;color:var(--gray-500);margin-top:4px">Giá chính xác sau khi thợ khảo sát</div>
+          </div>
+
+          <button style="width:100%;padding:12px;background:transparent;border:1px solid var(--gray-300);color:var(--gray-700);border-radius:8px;font-family:inherit;font-size:13px;cursor:pointer">
+            Hủy
+          </button>
+        </div>
+        <div class="footer-action">
+          <button class="btn-primary">Đặt order trả phí</button>
+        </div>
+      </div>
+      <div class="screen-label">Screen 8 · Not covered → suggest paid order</div>
+    </div>
+
+    <!-- Screen 9: Claim pending status -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:25</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Trạng thái yêu cầu</h2>
+          <button class="info"> </button>
+        </div>
+        <div class="content">
+          <div class="status-card">
+            <div class="icon">⏳</div>
+            <div class="title">Đang xử lý</div>
+            <div class="desc">Yêu cầu sửa của bạn đang chờ Ops duyệt</div>
+            <div class="eta">⏰ Dự kiến phản hồi trong 5 phút</div>
+          </div>
+
+          <div class="section-title">Chi tiết yêu cầu</div>
+          <div style="background:white;border:1px solid var(--gray-100);border-radius:12px;padding:14px;margin-bottom:12px">
+            <div class="summary-row">
+              <span>Mã yêu cầu</span>
+              <span class="value" style="font-size:11px">WC-2026-001234</span>
+            </div>
+            <div class="summary-row">
+              <span>Loại</span>
+              <span>Sửa chữa</span>
+            </div>
+            <div class="summary-row">
+              <span>Lỗi</span>
+              <span>Tụ điện máy lạnh</span>
+            </div>
+            <div class="summary-row">
+              <span>Gửi lúc</span>
+              <span class="value">14:25 hôm nay</span>
+            </div>
+          </div>
+
+          <div class="section-title">Tiến trình</div>
+          <div style="position:relative;padding-left:24px">
+            <div style="position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--gray-300)"></div>
+            
+            <div style="position:relative;margin-bottom:16px">
+              <div style="position:absolute;left:-24px;top:0;width:18px;height:18px;background:var(--green);border-radius:50%;color:white;text-align:center;line-height:18px;font-size:11px">✓</div>
+              <div style="font-weight:600;font-size:13px">Yêu cầu gửi</div>
+              <div style="font-size:11px;color:var(--gray-500)">14:25 · hôm nay</div>
+            </div>
+
+            <div style="position:relative;margin-bottom:16px">
+              <div style="position:absolute;left:-24px;top:0;width:18px;height:18px;background:var(--orange);border-radius:50%;color:white;text-align:center;line-height:18px;font-size:11px">⏳</div>
+              <div style="font-weight:600;font-size:13px">Ops đang duyệt</div>
+              <div style="font-size:11px;color:var(--gray-500)">SLA 5 phút</div>
+            </div>
+
+            <div style="position:relative;margin-bottom:16px;opacity:0.4">
+              <div style="position:absolute;left:-24px;top:0;width:18px;height:18px;background:var(--gray-300);border-radius:50%"></div>
+              <div style="font-weight:600;font-size:13px">Tạo order miễn phí</div>
+            </div>
+
+            <div style="position:relative;opacity:0.4">
+              <div style="position:absolute;left:-24px;top:0;width:18px;height:18px;background:var(--gray-300);border-radius:50%"></div>
+              <div style="font-weight:600;font-size:13px">Thợ tới sửa</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="screen-label">Screen 9 · Claim pending Ops review</div>
+    </div>
+
+    <!-- Screen 10: Claim approved + order created -->
+    <div class="phone">
+      <div class="phone-screen">
+        <div class="status-bar"><span>14:31</span><span>📶 100% 🔋</span></div>
+        <div class="app-header">
+          <button class="back">←</button>
+          <h2>Đã duyệt</h2>
+          <button class="info"> </button>
+        </div>
+        <div class="content">
+          <div style="background:linear-gradient(135deg,var(--green) 0%,var(--green-dark) 100%);color:white;padding:24px;border-radius:16px;text-align:center;margin-bottom:16px">
+            <div style="font-size:48px;margin-bottom:8px">✅</div>
+            <div style="font-size:18px;font-weight:700;margin-bottom:4px">Yêu cầu đã duyệt</div>
+            <div style="font-size:13px;opacity:0.9">Order miễn phí đã tạo. Đang tìm thợ.</div>
+          </div>
+
+          <div style="background:white;border:1px solid var(--gray-100);border-radius:12px;padding:14px;margin-bottom:12px">
+            <div style="font-weight:700;font-size:14px;margin-bottom:8px">Order #ORD-789</div>
+            <div class="summary-row">
+              <span>Dịch vụ</span>
+              <span>Sửa tụ điện AC</span>
+            </div>
+            <div class="summary-row">
+              <span>Phí KH thanh toán</span>
+              <span style="color:var(--green);font-weight:700;font-family:'JetBrains Mono',monospace">0₫ (warranty)</span>
+            </div>
+            <div class="summary-row">
+              <span>Quota còn lại</span>
+              <span style="font-weight:600">3 / 4 lần</span>
+            </div>
+            <div class="summary-row">
+              <span>ETA thợ</span>
+              <span class="value">15:00 - 16:00</span>
+            </div>
+          </div>
+
+          <div class="coverage-banner">
+            <span class="icon">💎</span>
+            <div class="text">
+              <strong>Lỗi này được cover bởi gói AC Basic</strong>
+              Tụ điện được thay miễn phí, không tính phí thợ + linh kiện.
+            </div>
+          </div>
+
+          <div style="background:var(--gray-50);padding:12px;border-radius:8px;font-size:11px;color:var(--gray-500);line-height:1.5;margin-top:12px">
+            ⓘ Bảo hành tay nghề thợ 30 ngày sau khi sửa. Nếu sự cố tái phát do cùng lỗi, báo lại để được sửa lại miễn phí.
+          </div>
+        </div>
+        <div class="footer-action">
+          <button class="btn-primary">Xem order chi tiết</button>
+        </div>
+      </div>
+      <div class="screen-label">Screen 10 · Approved · Free order created</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

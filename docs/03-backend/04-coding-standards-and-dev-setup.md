@@ -674,6 +674,518 @@ linters-settings:
 
 ---
 
+### 1.15.3 Multi-agent step split · `MultiAgentSplit` (v3.5+)
+
+> Pattern này dùng cho dispatch-engine + finance-svc khi 1 order_step có nhiều agents tham gia với split ratio riêng. Logic ghép giữa **step weight** (% step trong order) và **role split** (% trong step).
+
+#### Pattern problem
+
+Order = 1,000,000 VND, service "Sửa máy lạnh" (4 steps, weights 30/20/30/20 bps).
+Step 3 "Lắp đặt": lead A (50%), specialist C electrician (50%).
+
+```go
+// Sai: chia thẳng commission cho N agents → mất precision + không phân biệt step
+agentAmount := totalCommission / numAgents  // BUG · không dùng split_bps
+```
+
+Đúng: dùng pattern hierarchical breakdown.
+
+#### Step 1 · Compute step_revenue per step
+
+```go
+// pkg/finance/multiagent.go
+package finance
+
+import (
+    "fmt"
+    "smp/pkg/money"
+)
+
+// ComputeStepRevenue derives revenue allocated to each order_step.
+//
+//   step_revenue[i] = order_revenue × step_weight_bps[i] / 10000
+//
+// Residual rounding rule: last step absorbs rounding to ensure
+//   SUM(step_revenue) == order_revenue exactly.
+func ComputeStepRevenue(orderRevenue money.Money, stepWeightsBps []int) ([]money.Money, error) {
+    if len(stepWeightsBps) == 0 {
+        return nil, fmt.Errorf("at least one step required")
+    }
+    
+    // Validate sum = 10000
+    sum := 0
+    for _, w := range stepWeightsBps {
+        if w < 0 || w > 10000 {
+            return nil, fmt.Errorf("step weight bps out of range: %d", w)
+        }
+        sum += w
+    }
+    if sum != 10000 {
+        return nil, fmt.Errorf("step weights sum must equal 10000 bps (100%%), got %d", sum)
+    }
+    
+    n := len(stepWeightsBps)
+    result := make([]money.Money, n)
+    
+    // Compute first N-1 steps with MulBps
+    var allocated money.Money
+    for i := 0; i < n-1; i++ {
+        result[i] = orderRevenue.MulBps(stepWeightsBps[i])
+        allocated = allocated.Add(result[i])
+    }
+    
+    // Last step = residual (absorbs rounding)
+    result[n-1] = orderRevenue.Sub(allocated)
+    
+    return result, nil
+}
+```
+
+#### Step 2 · Compute agent earnings per step
+
+```go
+// AgentSplit describes one agent's share of a step.
+type AgentSplit struct {
+    AgentID  int64
+    Role     string  // "lead" | "helper" | "specialist"
+    SplitBps int     // sum across all agents per step = 10000
+}
+
+// SplitStepRevenue computes how much each agent earns from one order_step.
+//
+//   amount_earned[i] = step_revenue × split_bps[i] / 10000
+//
+// Residual rounding rule: the LEAD agent absorbs rounding to ensure
+//   SUM(amount_earned) == step_revenue exactly.
+func SplitStepRevenue(stepRevenue money.Money, splits []AgentSplit) (map[int64]money.Money, error) {
+    if len(splits) == 0 {
+        return nil, fmt.Errorf("at least one agent required")
+    }
+    
+    // Validate: exactly 1 lead + sum bps = 10000
+    leadCount, sumBps := 0, 0
+    leadIdx := -1
+    for i, s := range splits {
+        if s.Role == "lead" {
+            leadCount++
+            leadIdx = i
+        }
+        if s.SplitBps < 0 || s.SplitBps > 10000 {
+            return nil, fmt.Errorf("split bps out of range for agent %d: %d", s.AgentID, s.SplitBps)
+        }
+        sumBps += s.SplitBps
+    }
+    if leadCount != 1 {
+        return nil, fmt.Errorf("exactly 1 lead required, got %d", leadCount)
+    }
+    if sumBps != 10000 {
+        return nil, fmt.Errorf("split bps sum must equal 10000, got %d", sumBps)
+    }
+    
+    result := make(map[int64]money.Money, len(splits))
+    var allocated money.Money
+    
+    // Compute non-lead agents
+    for i, s := range splits {
+        if i == leadIdx {
+            continue
+        }
+        amt := stepRevenue.MulBps(s.SplitBps)
+        result[s.AgentID] = amt
+        allocated = allocated.Add(amt)
+    }
+    
+    // Lead absorbs residual (rounding adjustment)
+    result[splits[leadIdx].AgentID] = stepRevenue.Sub(allocated)
+    
+    return result, nil
+}
+```
+
+#### Step 3 · Combined helper · earnings for full order
+
+```go
+// OrderStepConfig describes one order_step with its agents.
+type OrderStepConfig struct {
+    StepNo         int
+    StepWeightBps  int
+    Agents         []AgentSplit
+}
+
+// ComputeOrderEarnings computes amount_earned per agent for entire order.
+// Returns map[agent_id]map[step_no]amount.
+func ComputeOrderEarnings(
+    orderRevenue money.Money,
+    steps []OrderStepConfig,
+) (map[int64]map[int]money.Money, error) {
+    // Extract step weights
+    weights := make([]int, len(steps))
+    for i, s := range steps {
+        weights[i] = s.StepWeightBps
+    }
+    
+    // Compute step revenues
+    stepRevenues, err := ComputeStepRevenue(orderRevenue, weights)
+    if err != nil {
+        return nil, fmt.Errorf("compute step revenue: %w", err)
+    }
+    
+    // Compute agent earnings per step
+    result := make(map[int64]map[int]money.Money)
+    for i, step := range steps {
+        agentEarnings, err := SplitStepRevenue(stepRevenues[i], step.Agents)
+        if err != nil {
+            return nil, fmt.Errorf("split step %d: %w", step.StepNo, err)
+        }
+        
+        for agentID, amount := range agentEarnings {
+            if result[agentID] == nil {
+                result[agentID] = make(map[int]money.Money)
+            }
+            result[agentID][step.StepNo] = amount
+        }
+    }
+    
+    return result, nil
+}
+```
+
+#### Usage example
+
+```go
+// Order 1,000,000 VND with 4 steps
+orderRevenue := money.NewVND(1_000_000)
+
+steps := []finance.OrderStepConfig{
+    {StepNo: 1, StepWeightBps: 3000, Agents: []finance.AgentSplit{
+        {AgentID: 1001, Role: "lead", SplitBps: 7000},
+        {AgentID: 1002, Role: "helper", SplitBps: 3000},
+    }},
+    {StepNo: 2, StepWeightBps: 2000, Agents: []finance.AgentSplit{
+        {AgentID: 1001, Role: "lead", SplitBps: 6000},
+        {AgentID: 1002, Role: "helper", SplitBps: 4000},
+    }},
+    {StepNo: 3, StepWeightBps: 3000, Agents: []finance.AgentSplit{
+        {AgentID: 1001, Role: "lead", SplitBps: 4000},
+        {AgentID: 1003, Role: "specialist", SplitBps: 4000},
+        {AgentID: 1004, Role: "helper", SplitBps: 2000},
+    }},
+    {StepNo: 4, StepWeightBps: 2000, Agents: []finance.AgentSplit{
+        {AgentID: 1001, Role: "lead", SplitBps: 10000},
+    }},
+}
+
+earnings, err := finance.ComputeOrderEarnings(orderRevenue, steps)
+// earnings[1001] = {1: 210k, 2: 120k, 3: 120k+residual, 4: 200k} → total ~650k
+// earnings[1002] = {1: 90k, 2: 80k}                              → 170k
+// earnings[1003] = {3: 120k}                                     → 120k
+// earnings[1004] = {3: 60k}                                      → 60k
+// SUM all = 1,000,000 ✓
+```
+
+#### Validation helpers
+
+```go
+// ValidateStepWeights checks SUM(weights) == 10000 + range.
+// Use BEFORE inserting/updating service_steps rows.
+func ValidateStepWeights(weights []int) error { /* ... */ }
+
+// ValidateAgentSplits checks exactly 1 lead + SUM == 10000 + ranges.
+// Use BEFORE inserting/updating order_step_agents rows.
+func ValidateAgentSplits(splits []AgentSplit) error { /* ... */ }
+```
+
+#### Test cases (REQUIRED · ≥ 95% coverage)
+
+| Case | Input | Expected |
+|---|---|---|
+| Happy path 4 steps × 2-3 agents | 1M VND order | SUM all earnings = 1M exactly |
+| Single agent (lead 100%) | 1 step, 1 lead | All revenue → lead |
+| Rounding edge case | 99,999 VND prime, 3 steps × 3 agents | No drift (lead absorbs) |
+| Invalid weights sum | weights = [3000, 3000, 3000] | Error: sum != 10000 |
+| Multiple leads | 2 agents both role=lead | Error: exactly 1 lead required |
+| Negative split | split_bps = -100 | Error: out of range |
+
+```go
+func TestComputeOrderEarnings_NoDrift(t *testing.T) {
+    for _, total := range []int64{1, 99, 99_999, 1_000_000, 9_999_999_991} {
+        revenue := money.NewVND(total)
+        // 4 steps with various weights + 2-3 agents each
+        config := buildTestSteps()
+        
+        earnings, err := finance.ComputeOrderEarnings(revenue, config)
+        require.NoError(t, err)
+        
+        // SUM all amounts MUST equal original revenue
+        var sum money.Money
+        for _, byStep := range earnings {
+            for _, amt := range byStep {
+                sum = sum.Add(amt)
+            }
+        }
+        require.True(t, sum.Equal(revenue), "drift detected: got %v expected %v", sum, revenue)
+    }
+}
+```
+
+#### Linter rule
+
+```yaml
+# .forbidigo.yaml addition
+forbidigo:
+  forbid:
+    - p: 'commission\s*/\s*len\(agents\)'
+      msg: "Don't divide commission by agent count. Use SplitStepRevenue with explicit split_bps."
+    - p: 'amount\s*\*\s*0\.[0-9]'
+      msg: "Don't multiply Money by float. Use MulBps() or SplitStepRevenue()."
+```
+
+---
+
+### 1.15.4 Warranty package logic · `pkg/warranty` (v3.5+)
+
+> Pattern cho maintenance subscription packages. Quota check + claim validation + deferred revenue recognition. Schema [Doc 02 §7.8](../02-database/02-database-schema.md), accounting [Doc 16 §3.6](../09-finance/16-finance-ledger-spec.md).
+
+#### Package structure
+
+```text
+pkg/warranty/
+├── resolver.go         # WarrantyResolver · validate claims
+├── quota.go            # Quota tracking + atomic decrement
+├── recognition.go      # Deferred revenue recognition cron
+├── refund.go           # Refund calculator (cooling-off + proportional)
+└── warranty_test.go
+```
+
+#### WarrantyResolver · validate claim
+
+```go
+package warranty
+
+import (
+    "context"
+    "fmt"
+    "time"
+)
+
+// ClaimRequest describes a customer's request to use a warranty.
+type ClaimRequest struct {
+    CustomerWarrantyID int64
+    ClaimType          string  // cleaning | repair_basic | repair_full
+    ServiceCode        string  // for cleaning
+    IssueCategory      string  // for repair · must match covered_issues
+}
+
+// ValidationError reports why a claim is rejected.
+type ValidationError struct {
+    Code    string  // EXPIRED | NO_QUOTA | NOT_COVERED | TOO_SOON | etc.
+    Message string
+}
+
+func (e *ValidationError) Error() string {
+    return fmt.Sprintf("%s: %s", e.Code, e.Message)
+}
+
+// ValidateClaim runs all BR-WPKG-004 checks.
+// Returns nil if claim can proceed, ValidationError otherwise.
+func (r *WarrantyResolver) ValidateClaim(ctx context.Context, req ClaimRequest, now time.Time) error {
+    warranty, err := r.repo.GetWarranty(ctx, req.CustomerWarrantyID)
+    if err != nil {
+        return fmt.Errorf("get warranty: %w", err)
+    }
+    
+    // Check 1: warranty active
+    if warranty.Status != "active" {
+        return &ValidationError{Code: "NOT_ACTIVE", Message: "Gói không còn hoạt động"}
+    }
+    
+    // Check 2: not expired
+    if now.After(warranty.EndDateUTC) {
+        return &ValidationError{Code: "EXPIRED", Message: "Gói đã hết hạn"}
+    }
+    
+    // Check 3: quota available
+    quota, err := r.repo.GetQuotaBalance(ctx, req.CustomerWarrantyID, req.ClaimType, req.ServiceCode)
+    if err != nil {
+        return fmt.Errorf("get quota: %w", err)
+    }
+    if quota.CountRemaining <= 0 {
+        return &ValidationError{Code: "NO_QUOTA", Message: "Đã hết lượt cho loại này"}
+    }
+    
+    // Check 4: rate limit (per_period)
+    if quota.NextEligibleAtUTC != nil && now.Before(*quota.NextEligibleAtUTC) {
+        return &ValidationError{
+            Code:    "TOO_SOON",
+            Message: fmt.Sprintf("Phải đợi đến %s", quota.NextEligibleAtUTC.Format("2006-01-02")),
+        }
+    }
+    
+    // Check 5: covered issue (only for repairs)
+    if req.ClaimType == "repair_basic" || req.ClaimType == "repair_full" {
+        covered, err := r.repo.IsCoveredIssue(ctx, warranty.PackageID, req.IssueCategory)
+        if err != nil {
+            return fmt.Errorf("check covered: %w", err)
+        }
+        if !covered {
+            return &ValidationError{
+                Code:    "NOT_COVERED",
+                Message: fmt.Sprintf("Lỗi '%s' không nằm trong scope gói. Đặt order trả phí.", req.IssueCategory),
+            }
+        }
+    }
+    
+    return nil
+}
+```
+
+#### Quota tracking · atomic decrement
+
+```go
+// DecrementQuota atomically decrements count_remaining and updates last_used.
+// Uses row-level lock to prevent race conditions.
+func (r *WarrantyResolver) DecrementQuota(ctx context.Context, req ClaimRequest, now time.Time) error {
+    return r.db.WithTransaction(ctx, func(tx Tx) error {
+        // Lock the quota row
+        quota, err := r.repo.LockQuotaBalance(tx, req.CustomerWarrantyID, req.ClaimType, req.ServiceCode)
+        if err != nil {
+            return err
+        }
+        
+        // Re-validate (defense in depth · concurrent claim might have consumed it)
+        if quota.CountRemaining <= 0 {
+            return &ValidationError{Code: "NO_QUOTA_RACE", Message: "Quota consumed by another claim"}
+        }
+        
+        // Compute next_eligible based on per_period rule
+        var nextEligible *time.Time
+        if quota.PeriodDays > 0 {
+            t := now.AddDate(0, 0, quota.PeriodDays)
+            nextEligible = &t
+        }
+        
+        // Update
+        return r.repo.UpdateQuota(tx, quota.ID, QuotaUpdate{
+            CountRemaining:    quota.CountRemaining - 1,
+            CountUsed:         quota.CountUsed + 1,
+            LastUsedAtUTC:     now,
+            NextEligibleAtUTC: nextEligible,
+        })
+    })
+}
+```
+
+#### Deferred revenue recognition (cron)
+
+```go
+// RecognizeRevenueForPeriod processes all due recognition entries.
+// Called nightly by cron · idempotent.
+func (r *WarrantyResolver) RecognizeRevenueForPeriod(ctx context.Context, now time.Time) error {
+    dueEntries, err := r.repo.GetDueRecognitionEntries(ctx, now)
+    if err != nil {
+        return err
+    }
+    
+    for _, entry := range dueEntries {
+        // Idempotency: skip if already posted
+        if entry.JournalEntryID != 0 {
+            continue
+        }
+        
+        // Post journal: Dr deferred_revenue / Cr revenue_warranty_subscription
+        journalID, err := r.finance.PostJournal(ctx, finance.JournalRequest{
+            EntryType:     "warranty_revenue_recognition",
+            ReferenceType: "warranty_revenue_recognition",
+            ReferenceID:   fmt.Sprintf("%d", entry.ID),
+            Lines: []finance.Line{
+                {Account: "deferred_revenue", Side: "Dr", Amount: entry.Amount, OwnerType: "customer_warranty", OwnerID: entry.CustomerWarrantyID},
+                {Account: "revenue_warranty_subscription", Side: "Cr", Amount: entry.Amount},
+            },
+        })
+        if err != nil {
+            return fmt.Errorf("post journal for entry %d: %w", entry.ID, err)
+        }
+        
+        // Mark posted
+        if err := r.repo.MarkRecognitionPosted(ctx, entry.ID, journalID, now); err != nil {
+            return err
+        }
+        
+        // Update warranty.total_amount_recognized
+        if err := r.repo.IncrementRecognized(ctx, entry.CustomerWarrantyID, entry.Amount); err != nil {
+            return err
+        }
+    }
+    
+    return nil
+}
+```
+
+#### Refund calculator
+
+```go
+// CalculateRefund computes refund amount for warranty cancellation.
+// Per BR-WPKG-003: 100% within 7 days, proportional after.
+func CalculateRefund(warranty *Warranty, now time.Time) (money.Money, string) {
+    daysSinceStart := int(now.Sub(warranty.StartDateUTC).Hours() / 24)
+    
+    if daysSinceStart <= 7 {
+        // Cooling-off · full refund (including VAT portion)
+        return warranty.PricePaid, "cooling_off_full_refund"
+    }
+    
+    // Proportional refund based on unused duration
+    totalDays := int(warranty.EndDateUTC.Sub(warranty.StartDateUTC).Hours() / 24)
+    usedDays := daysSinceStart
+    remainingDays := totalDays - usedDays
+    if remainingDays <= 0 {
+        return money.Zero(warranty.Currency), "no_refund_expired"
+    }
+    
+    // refund = price × remaining/total
+    ratio := float64(remainingDays) / float64(totalDays)
+    refundAmount := warranty.PricePaid.MulBps(int(ratio * 10000))
+    
+    return refundAmount, "proportional_refund"
+}
+```
+
+#### Test cases (REQUIRED)
+
+| Case | Input | Expected |
+|---|---|---|
+| Valid cleaning claim | active warranty, quota=3 | Pass, quota → 2 |
+| Expired warranty | end_date < now | Error EXPIRED |
+| No quota | quota=0 | Error NO_QUOTA |
+| Issue not covered | issue=compressor, whitelist=[capacitor] | Error NOT_COVERED |
+| Too soon | last_used + period_days > now | Error TOO_SOON |
+| Race condition | 2 concurrent claims, quota=1 | Only 1 succeeds |
+| Cooling-off refund | day 3 | Full refund |
+| Proportional refund | day 90 of 365 | 75% refund |
+| Revenue recognition | 12-month warranty, month 1 | Post 1/12 of net |
+| Revenue recognition residual | month 12 | Absorb remainder |
+
+```go
+func TestRecognizeRevenue_NoDrift(t *testing.T) {
+    for _, price := range []int64{1_200_000, 999_999, 1, 100} {
+        warranty := buildWarranty(price, 12)
+        
+        var total money.Money
+        for month := 1; month <= 12; month++ {
+            now := warranty.StartDateUTC.AddDate(0, month, 0)
+            recognized := recognizeMonth(warranty, now)
+            total = total.Add(recognized)
+        }
+        
+        // After 12 months, total recognized MUST equal net amount
+        net := warranty.PricePaid.Sub(warranty.VATAmount)
+        require.True(t, total.Equal(net), "drift: got %v expected %v", total, net)
+    }
+}
+```
+
+---
+
 ### 1.16 v4.0 pattern · Rules Engine (`pkg/rules`)
 
 > Pattern này dùng cho services có business logic thay đổi theo policy (dispatch-engine, finance-svc, catalog-svc). Thay vì hardcode rule trong Go, load từ YAML config.

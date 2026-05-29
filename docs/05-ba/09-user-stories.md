@@ -395,6 +395,270 @@ Scenario: Submit rating
 
 ---
 
+## Epic 7 · Multi-Agent Step Assignment (v3.5+ DRAFT)
+
+> Stories cho cơ chế nhiều thợ cùng 1 step với role + split ratio riêng. Schema [Doc 02 §7.7](../02-database/02-database-schema.md), rules [Doc 15 Section Q](./15-business-rules.md).
+
+### US-7.1 · Lead invites helper into step
+
+**As a** lead agent on a step  
+**I want to** invite a helper into my step  
+**So that** we can work together on tasks that need more hands
+
+**Acceptance Criteria**:
+- [ ] Lead có button "Invite helper" trong step detail screen (mobile app)
+- [ ] Lead chọn helper từ list available agents (filter by location proximity + online status)
+- [ ] Lead set initial split_bps cho helper (default by service template, có thể adjust)
+- [ ] System verify SUM(splits including new helper) = 10000 → nếu không, prompt lead adjust existing splits
+- [ ] Helper nhận push notification với invitation details
+- [ ] Helper có 30 phút để accept/reject (BR-MA-007)
+- [ ] After accept, helper thấy step trong "My active orders"
+- [ ] Audit log: `StepAgentAssigned` event emitted
+
+**Story points**: 8
+
+### US-7.2 · Lead overrides split ratio for team
+
+**As a** lead agent on a step  
+**I want to** adjust split ratios between team members  
+**So that** I can reflect actual contribution fairly
+
+**Acceptance Criteria**:
+- [ ] Lead có button "Adjust splits" khi step in_progress hoặc earlier
+- [ ] Modal show current splits với editable inputs (display as %, store as bps)
+- [ ] Real-time validation: SUM MUST = 100% before submit
+- [ ] Constraint: KHÔNG được giảm split của agent đã `status='completed'` (BR-MA-004)
+- [ ] Optional reason text field
+- [ ] After submit, all agents nhận notification "Split ratio updated"
+- [ ] Audit log: `StepSplitOverridden` event với before/after diff
+- [ ] History viewable: list các override với timestamps
+
+**Story points**: 5
+
+### US-7.3 · Agent views earnings per step
+
+**As an** agent (lead or helper)  
+**I want to** see my earnings broken down per step  
+**So that** I understand exactly how much I made and from what
+
+**Acceptance Criteria**:
+- [ ] Earnings screen show list orders → click 1 order → list steps
+- [ ] Each step show: role (lead/helper/specialist), split %, step revenue, my earned amount
+- [ ] Status indicator: pending/confirmed/paid
+- [ ] Helpers chỉ thấy split + amount của mình (KHÔNG thấy của lead/others) per BR-MA-010
+- [ ] Lead có thêm view "Team breakdown" show all agents in step (transparency)
+- [ ] Filter by date range + role
+- [ ] Sum total at top: total earnings in period
+- [ ] Currency format theo locale
+
+**Story points**: 5
+
+### US-7.4 · Ops admin configures service step weights
+
+**As an** Ops admin  
+**I want to** configure step weights + role splits per service template  
+**So that** the system has correct defaults for new orders
+
+**Acceptance Criteria**:
+- [ ] Admin Web page "Service templates" list all services
+- [ ] Click service → see N steps with editable step_weight_bps (display as %)
+- [ ] Real-time validation: SUM of step weights = 100%
+- [ ] For each step, configure role splits (lead 100% by default, can add helper/specialist with split)
+- [ ] Specialty dropdown for specialist role (electrician, plumber, etc.)
+- [ ] Save → validation runs, errors shown inline
+- [ ] After save, new orders use updated defaults; existing orders unchanged
+- [ ] Audit log: who changed what (PII compliance)
+- [ ] Read-only view for Partner Manager role
+
+**Story points**: 13
+
+### US-7.5 · System distributes earnings on step completion
+
+**As the** finance system  
+**I want to** automatically post journal entries when a step completes  
+**So that** each agent receives correct earnings per their split
+
+**Acceptance Criteria**:
+- [ ] When `order_step.status` → `completed`, finance-svc triggered via `StepEarningsCalculated` event
+- [ ] Compute step_revenue + per-agent amount_earned per Doc 04 §1.15.3
+- [ ] Lead absorbs residual rounding
+- [ ] Post 1 journal entry with N+1 lines (1 debit revenue_commission + N credit agent_payable per agent)
+- [ ] SUM(debits) == SUM(credits) exactly (BR-MA-005)
+- [ ] Idempotent: retry doesn't double-post
+- [ ] Update `order_step_agents.amount_earned` for each row
+- [ ] Emit `StepEarningsCalculated` event with full breakdown
+- [ ] Daily reconcile job verify: SUM(order_step_agents.amount_earned) per step ≈ step_revenue
+
+**Story points**: 13
+
+---
+
+## Epic 8 · Warranty Package (Maintenance Subscription) (v3.5+ DRAFT)
+
+> Stories cho gói thuê bao bảo trì + sửa chữa. Schema [Doc 02 §7.8](../02-database/02-database-schema.md), rules [Doc 15 Section R](./15-business-rules.md), policy [Doc 19 §9](../10-legal/19-service-guarantee-policy.md).
+
+### US-8.1 · Customer browses warranty package catalog
+
+**As a** customer with existing devices  
+**I want to** browse warranty packages for my device categories  
+**So that** I can choose a suitable maintenance plan
+
+**Acceptance Criteria**:
+- [ ] Catalog screen show packages filtered by device categories KH có
+- [ ] Mỗi package card show: tên, thời hạn, giá, quotas (vệ sinh + repair), trải nghiệm key features
+- [ ] Tap package → detail page show full covered_issues + exclusions + T&C
+- [ ] CTA button "Mua ngay" → kicks off purchase flow
+
+**Story points**: 5
+
+### US-8.2 · Customer registers device
+
+**As a** customer  
+**I want to** register my devices (AC, washer, etc.)  
+**So that** I can purchase warranty for them
+
+**Acceptance Criteria**:
+- [ ] "My Devices" screen với add button
+- [ ] Form: category (dropdown), brand, model, serial, install_date, install_location
+- [ ] Optional: photo of device
+- [ ] Save → device available for warranty purchase
+- [ ] Edit/delete devices (with restrictions if active warranty)
+
+**Story points**: 5
+
+### US-8.3 · Customer purchases warranty package
+
+**As a** customer  
+**I want to** purchase a warranty package for my device  
+**So that** I can get scheduled maintenance + free repairs
+
+**Acceptance Criteria**:
+- [ ] After selecting package + device, show summary screen with price + T&C
+- [ ] Checkbox "I agree to terms" required before payment
+- [ ] Payment via gateway hoặc wallet
+- [ ] On success → notification + "My Warranties" updated
+- [ ] Confirmation email/SMS với gói details + start/end dates
+- [ ] Validation BR-WPKG-002: cannot buy duplicate active package for same device
+
+**Story points**: 8
+
+### US-8.4 · Customer opens claim for cleaning
+
+**As a** customer with active warranty  
+**I want to** schedule a cleaning service using my quota  
+**So that** I can maintain my device
+
+**Acceptance Criteria**:
+- [ ] "My Warranties" → tap warranty → "Sử dụng gói" button
+- [ ] Show available actions: cleaning (if quota), repair (input issue)
+- [ ] For cleaning: pick date + time window
+- [ ] Submit → auto-approved (BR-WPKG-006), free order created
+- [ ] Quota decremented immediately
+- [ ] Notification: "Đã xếp lịch vệ sinh vào ngày X"
+
+**Story points**: 5
+
+### US-8.5 · Customer opens claim for repair (with whitelist check)
+
+**As a** customer  
+**I want to** request repair when device has issues  
+**So that** I get free repair if covered
+
+**Acceptance Criteria**:
+- [ ] Form: issue_category (dropdown), description, photos
+- [ ] Pre-validation: check if issue in covered_issues whitelist
+- [ ] If not covered → show message "Issue này không trong scope. Đặt order trả phí?" + link to normal order
+- [ ] If covered → submit pending approval
+- [ ] Push notification when Ops approves/rejects
+- [ ] On approve: free order created + agent dispatched
+
+**Story points**: 8
+
+### US-8.6 · Ops admin reviews repair claims
+
+**As an** Ops admin  
+**I want to** review pending repair claims and decide approve/reject  
+**So that** quality is maintained and abuse prevented
+
+**Acceptance Criteria**:
+- [ ] Admin Web "Warranty Claims" queue · sortable by claimed_at_utc
+- [ ] Each row: customer name, device, issue, photos, package info
+- [ ] One-click approve (with optional notes)
+- [ ] One-click reject (with reason field required)
+- [ ] On approve: emit `WarrantyClaimApproved` event, order created
+- [ ] On reject: customer notified with reason + suggestion
+- [ ] SLA tracker: claims pending > 5 minutes highlighted red
+
+**Story points**: 8
+
+### US-8.7 · System auto-suggests maintenance scheduling
+
+**As a** system  
+**I want to** auto-suggest customers to schedule periodic maintenance  
+**So that** they use their quota and stay engaged
+
+**Acceptance Criteria**:
+- [ ] Cron daily 09:00 VN time
+- [ ] For each warranty với auto_suggest=TRUE và last cleaning > suggest_interval_days ago
+- [ ] Send push notification "Đã 3 tháng từ lần vệ sinh trước. Đặt lịch ngay?"
+- [ ] Deep link to claim flow with cleaning pre-selected
+- [ ] KH có toggle opt-out trong settings (per warranty)
+- [ ] No spam: max 1 suggestion per warranty per 30 days
+
+**Story points**: 5
+
+### US-8.8 · System recognizes revenue monthly (deferred → revenue)
+
+**As the** finance system  
+**I want to** recognize revenue monthly from deferred warranty subscriptions  
+**So that** P&L matches actual service delivery
+
+**Acceptance Criteria**:
+- [ ] Cron nightly 02:00 UTC
+- [ ] Process all `warranty_revenue_recognition` due (`recognition_date_utc <= NOW()` + not posted yet)
+- [ ] Post journal entry per Doc 16 §3.6.3
+- [ ] Update warranty's `total_amount_recognized` incrementally
+- [ ] Idempotent: re-run does NOT double-post
+- [ ] For last month: absorb residual to make total = net_amount exactly
+- [ ] Daily reconcile: `SUM(deferred_revenue) == SUM(price_paid - total_amount_recognized)`
+
+**Story points**: 13
+
+### US-8.9 · Customer cancels warranty (cooling-off or proportional refund)
+
+**As a** customer  
+**I want to** cancel my warranty package  
+**So that** I get my money back if I changed mind
+
+**Acceptance Criteria**:
+- [ ] "My Warranties" → warranty detail → "Cancel" button (with warning)
+- [ ] Show estimated refund amount based on policy (cooling-off vs proportional)
+- [ ] Require explicit confirmation
+- [ ] Within 7 days: full refund per BR-WPKG-003
+- [ ] After 7 days: proportional refund per Doc 16 §3.6.5
+- [ ] On confirm: refund initiated, warranty status → cancelled
+- [ ] Email confirmation with refund timeline
+
+**Story points**: 8
+
+### US-8.10 · Customer renews expiring warranty
+
+**As a** customer  
+**I want to** renew my warranty before it expires  
+**So that** I keep continuous coverage
+
+**Acceptance Criteria**:
+- [ ] Notification 7 days before end_date_utc
+- [ ] "Renew" button in My Warranties (active 30 days before expiry)
+- [ ] Show renewal price (with loyalty discount if eligible)
+- [ ] On renew: new warranty starts at old.end_date + 1 day, no gap
+- [ ] Quotas reset to package defaults (NOT carried over by default per BR-WPKG-012)
+- [ ] Confirmation email
+
+**Story points**: 5
+
+---
+
 ## Definition of Done
 
 Mỗi story coi như done khi:

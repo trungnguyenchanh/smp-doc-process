@@ -67,14 +67,99 @@ Trong thời hạn bảo hành, nếu lỗi **tái phát do tay nghề hoặc li
 
 ---
 
+## 9. Gói bảo hành mua riêng (Maintenance Subscription Package) · v3.5+
+
+> Phân biệt rõ với "warranty embedded" ở Section 2-8 (tự động kèm theo order). Section này quy định **gói thuê bao** KH chủ động mua trước cho thiết bị có sẵn.
+
+### 9.1 · Bản chất pháp lý
+
+- **KHÔNG phải hợp đồng bảo hiểm** · không cần license của Bộ Tài chính
+- Là **gói dịch vụ trả trước** (service prepaid package) · giống gói gym/spa subscription
+- Chuẩn kế toán: VAS 14 (Revenue Recognition) · defer revenue, recognize over time
+- Wording tránh: "bảo hiểm", "insurance", "đền bù". Wording dùng được: "gói bảo trì", "gói chăm sóc", "thuê bao dịch vụ"
+
+### 9.2 · Cấu trúc gói
+
+| Thành phần | Mô tả |
+|---|---|
+| **Thời hạn** | 6 tháng / 12 tháng / 24 tháng (configurable) |
+| **Phạm vi thiết bị** | 1 gói = 1 thiết bị (xác định bằng serial number nếu có) |
+| **Quota vệ sinh định kỳ** | Số lần vệ sinh trong period (vd 4 lần/năm cho AC) |
+| **Quota sửa chữa** | Whitelist các issue được sửa free (vd capacitor, gas refill cho AC) |
+| **Trần chi mỗi claim** | Cap value để tránh abuse (vd ≤ 500k/lần repair) |
+| **Auto-suggest** | Hệ thống nhắc đặt lịch định kỳ |
+
+### 9.3 · Quyền KH và nghĩa vụ SMP
+
+KH có quyền:
+- Được vệ sinh định kỳ theo quota (không cần lý do)
+- Được sửa chữa free cho các issues whitelisted (cần Ops approve)
+- Cooling-off period 7 ngày · refund 100% nếu không hài lòng
+- Cancel bất kỳ lúc nào · refund proportional remaining months
+- Renew với giá ưu đãi (10% off cho renewal on-time, configurable)
+
+SMP nghĩa vụ:
+- Cử thợ trong SLA (24h cho cleaning, 48h cho repair)
+- Chỉ thợ KYC `advanced` mới được dispatch cho warranty claims (chất lượng đảm bảo)
+- Refund đúng theo terms · không có "hidden fees"
+- Notify trước 7 ngày khi gói sắp hết hạn
+
+### 9.4 · Loại trừ (exclusions)
+
+**KH KHÔNG được claim**:
+- Hư hỏng do thiên tai, cháy nổ, ngập nước (force majeure)
+- Hư hỏng do KH sử dụng sai cách (vd dùng AC quá công suất, không vệ sinh filter)
+- Thiết bị có dấu hiệu tác động ngoại lực (vỡ, rơi)
+- Thay block, thay máy mới (cần order riêng trả phí)
+- Lỗi do thiết bị đã quá date sản xuất > 10 năm
+- Linh kiện non-standard KH tự lắp trước đó
+
+### 9.5 · Chống abuse
+
+Risks + mitigations:
+- **KH claim quá nhiều issues nhỏ** → cap repair quota count (vd max 6 lần/năm)
+- **KH chuyển gói sang nhà khác** → linked với device serial + customer_id, không transferable
+- **KH lạm dụng cooling-off** → log nếu cancel > 2 lần trong 6 tháng, flag account
+- **Agent gian lận** (báo claim ảo) → audit photo bắt buộc + sample re-inspection 5% claims
+
+### 9.6 · Pricing strategy (cho Founder + Finance decision)
+
+Reference benchmarks (VN market):
+- Vệ sinh AC định kỳ 1 lần: ~200k VND
+- Gói "Bảo trì AC 1 năm" market range: 1.0M-1.8M VND (4 lần vệ sinh + repair minor)
+
+Recommended pricing (DRAFT):
+| Gói | Thời hạn | Vệ sinh | Repair quota | Giá đề xuất |
+|---|---|---|---|---:|
+| AC Basic | 12 tháng | 4 lần | 4 lần whitelist | 1,200,000 |
+| AC Premium | 12 tháng | 4 lần | 8 lần whitelist | 1,800,000 |
+| AC Family (3 devices) | 12 tháng | 4 × 3 | 4 × 3 | 3,200,000 (v3.7+) |
+| Washer Basic | 12 tháng | 2 lần | 3 lần | 800,000 |
+| Fridge Basic | 12 tháng | - | 4 lần | 900,000 |
+
+> Pricing chốt sau pilot · Finance phân tích cost ~30% revenue (target gross margin 70%)
+
+### 9.7 · Migration từ v3.4
+
+- Khách hiện tại: hiển thị offer mua gói trên app
+- Sales channel: in-app catalog + admin web "Bán gói cho KH"
+- Pilot: 100 customers đầu tiên · 90-day window đo cancellation rate + claim rate
+- Pricing tuning theo data pilot
+
+---
+
 ## Việc cần luật sư VN xác nhận
 1. Ranh giới "service guarantee" vs "insurance" theo luật kinh doanh bảo hiểm.
 2. Trách nhiệm thợ gốc khi đã nghỉ việc — có truy đòi được không?
 3. Wording điều khoản loại trừ phù hợp với Luật Bảo vệ Quyền lợi Người tiêu dùng.
+4. **(v3.5 NEW)** Gói "Maintenance Subscription Package" có cần đăng ký với cơ quan nào không? Có nằm trong scope Luật Bảo vệ NTD 2023 không?
+5. **(v3.5 NEW)** Cooling-off 7 days · phù hợp với Luật BVNTD VN không (article 9)?
+6. **(v3.5 NEW)** Refund proportional · có phải tuân thủ thuế GTGT hoàn trả không?
 
 ---
 
 ## Changelog
 | Version | Date | Changes |
 |---|---|---|
+| 2.0 | 2026-05-29 | Add Section 9 · Maintenance Subscription Package (v3.5+) · 5 packages draft pricing |
 | 1.0 | 2026-05-28 | Tách từ trust-legal-policy-pack-v1.md (Section A). Service guarantee, không phải insurance. Quỹ reserve trích từ commission. |

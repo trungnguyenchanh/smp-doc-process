@@ -151,10 +151,10 @@ Hệ thống SMP chia thành **10 microservices**, mỗi service own 1 database,
 - Stage transitions với validation
 - Quote management (báo giá Survey)
 - Material consumption tracking (Execution)
-- Order step assignment (link agent vào step)
+- **Multi-agent step assignment** (v3.5+): mỗi step có thể có lead + helpers + specialists với split ratio riêng. Xem [Doc 02 §7.7](02-database/02-database-schema.md), [Doc 15 Section Q](05-ba/15-business-rules.md), [Doc 16 §3.5](09-finance/16-finance-ledger-spec.md).
 - Cancel/reschedule logic
 
-**Database**: `smp_order` (MySQL) · core tables: `orders`, `order_steps`, `order_step_materials`, `order_stage_log`
+**Database**: `smp_order` (MySQL) · core tables: `orders`, `order_steps`, `order_step_agents` (v3.5+), `order_step_materials`, `order_stage_log`
 
 #### 🟦 3. `dispatch-engine`
 **Vai trò**: Tim agent phù hợp gửi đơn
