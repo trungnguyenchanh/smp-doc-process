@@ -1,5 +1,4 @@
 # SMP Authentication & Authorization
-
 **Standards**: OAuth 2.1 + JWT (RS256) + RBAC · **Audience**: Backend, Frontend, Security
 
 ---
@@ -25,27 +24,27 @@ Có 4 loại user · từng nguồn:
 ### 2.2 Payload (claims)
 ```json
 {
-  "iss": "smp.vn",
-  "sub": "usr_01HX7K2M",
-  "aud": ["api.smp.vn"],
-  "iat": 1716800000,
-  "exp": 1716828800,
-  "jti": "tok_01HX7K2N",
-  
-  "role": "customer | technician | ops_admin | partner_owner | partner_manager | ...",
-  "scopes": ["orders.read", "orders.create", "agents.read"],
-  
-  "user": {
-    "id": "usr_01HX7K2M",
-    "name": "Nguyễn Hùng",
-    "phone_masked": "+84••••2841"
-  },
-  
-  "ctx": {
-    "partner_id": "ptn_hung_acservice",   
-    "agent_id": null,                      
-    "customer_id": "cus_01HX5K"           
-  }
+ "iss": "smp.vn",
+ "sub": "usr_01HX7K2M",
+ "aud": ["api.smp.vn"],
+ "iat": 1716800000,
+ "exp": 1716828800,
+ "jti": "tok_01HX7K2N",
+ 
+ "role": "customer | technician | ops_admin | partner_owner | partner_manager | ...",
+ "scopes": ["orders.read", "orders.create", "agents.read"],
+ 
+ "user": {
+ "id": "usr_01HX7K2M",
+ "name": "Nguyễn Hùng",
+ "phone_masked": "+84••••2841"
+ },
+ 
+ "ctx": {
+ "partner_id": "ptn_hung_acservice", 
+ "agent_id": null, 
+ "customer_id": "cus_01HX5K" 
+ }
 }
 ```
 
@@ -69,14 +68,14 @@ Private key stored in Vault, public key exposed via JWKS endpoint for services t
 
 ```text
 Customer mobile app
-    │ POST /auth/otp/request {"phone": "+84..."}
-    ▼
+ │ POST /auth/otp/request {"phone": "+84..."}
+ ▼
 auth-svc → SMS gateway → user receives OTP
-    │ POST /auth/login {"phone": "+84...", "otp": "123456"}
-    ▼
+ │ POST /auth/login {"phone": "+84...", "otp": "123456"}
+ ▼
 auth-svc verify OTP → issue JWT + refresh token
-    │
-    ▼
+ │
+ ▼
 App store tokens in secure storage (Keychain iOS, Keystore Android)
 ```
 
@@ -84,14 +83,14 @@ App store tokens in secure storage (Keychain iOS, Keystore Android)
 
 ```text
 Browser
-    │ POST /auth/login {"email":"hung@hungac.vn", "password":"..."}
-    ▼
+ │ POST /auth/login {"email":"hung@hungac.vn", "password":"..."}
+ ▼
 auth-svc verify password (bcrypt cost 12)
-    │ → if MFA enabled: respond {"mfa_required": true, "mfa_token": "..."}
-    ▼
+ │ → if MFA enabled: respond {"mfa_required": true, "mfa_token": "..."}
+ ▼
 Browser prompt TOTP
-    │ POST /auth/login/mfa {"mfa_token":"...", "totp_code":"123456"}
-    ▼
+ │ POST /auth/login/mfa {"mfa_token":"...", "totp_code":"123456"}
+ ▼
 auth-svc verify TOTP → issue JWT
 ```
 
@@ -99,13 +98,13 @@ auth-svc verify TOTP → issue JWT
 
 ```text
 Mobile app (token expired)
-    │ POST /auth/refresh {"refresh_token": "..."}
-    ▼
+ │ POST /auth/refresh {"refresh_token": "..."}
+ ▼
 auth-svc:
-    1. Validate refresh token + check not in revocation list
-    2. Issue NEW access + refresh token
-    3. Invalidate OLD refresh token (one-time use)
-    4. Detect reuse → security alert (compromise indicator)
+ 1. Validate refresh token + check not in revocation list
+ 2. Issue NEW access + refresh token
+ 3. Invalidate OLD refresh token (one-time use)
+ 4. Detect reuse → security alert (compromise indicator)
 ```
 
 ## 4. Roles & scopes catalog
@@ -185,7 +184,7 @@ Auto-scoped to `current_user.ctx.partner_id`:
 | `partner_finance` | `finance.view.own_partner`, `finance.export.own_partner`, `invoices.view.own_partner`, `invoices.download.own_partner`, `wallet.topup.own_partner` |
 | `partner_dispatcher` | `orders.view.own_partner`, `orders.create.own_partner`, `orders.dispatch.own_partner`, `agents.view.own_partner` |
 
-### 4.5 PII unmask scopes (v4.0)
+### 4.5 PII unmask scopes 
 
 > **Default-deny** pattern: mọi PII field default trả về **masked** (e.g., `0912****890`). Để xem full, caller phải có scope tương ứng. Mỗi lần unmask = 1 audit log entry.
 
@@ -221,27 +220,27 @@ Auto-scoped to `current_user.ctx.partner_id`:
 1. **Time-bounded unmask**: Một số scope chỉ valid trong 1 session ngắn (vd 1h sau MFA fresh). Sau đó re-auth.
 2. **Field-level audit**: Mỗi lần API trả về unmasked PII, ghi 1 record audit (xem [Doc 12 · Audit Log](./12-audit-log-spec.md#cross-cutting-pii-access-events)).
 3. **Bulk export rate limit**: scope `pii.unmask.bulk` giới hạn max 100 records/request + 5 requests/day.
-4. **Geographic restriction (v4.0)**: scope `pii.unmask.*` cho data của user country X chỉ caller cùng country/sovereignty_region được dùng (tránh CSKH VN unmask data US — vi phạm CPRA).
+4. **Geographic restriction**: scope `pii.unmask.*` cho data của user country X chỉ caller cùng country/sovereignty_region được dùng (tránh CSKH VN unmask data US — vi phạm CPRA).
 
 #### Unmask request flow
 
 ```text
 Caller request data
-        ▼
+ ▼
 API Gateway middleware checks JWT scope
-        ▼
-   ┌────┴────┐
-   ▼         ▼
-has scope   no scope
-   │         │
-   ▼         ▼
-unmask     mask (default)
-   │         │
-   ▼         ▼
-log "PII   return masked
+ ▼
+ ┌────┴────┐
+ ▼ ▼
+has scope no scope
+ │ │
+ ▼ ▼
+unmask mask (default)
+ │ │
+ ▼ ▼
+log "PII return masked
 access"
-   │
-   ▼
+ │
+ ▼
 return full data
 ```
 
@@ -256,24 +255,24 @@ Authorization-Fresh: <mfa_proof>
 Content-Type: application/json
 
 {
-  "entity_type": "customer",
-  "entity_id": "cus_01HX7K2M",
-  "fields": ["bank_account", "cccd"],
-  "reason": "Customer requested refund, verifying bank account for transfer",
-  "ticket_id": "ZD-12345"
+ "entity_type": "customer",
+ "entity_id": "cus_01HX7K2M",
+ "fields": ["bank_account", "cccd"],
+ "reason": "Customer requested refund, verifying bank account for transfer",
+ "ticket_id": "ZD-12345"
 }
 ```
 
 Response includes audit_id để track:
 ```json
 {
-  "unmask_session_id": "ums_01HXABCD",
-  "expires_at_utc": "2026-05-28T11:30:00Z",
-  "audit_id": "aud_01HXABCE",
-  "data": {
-    "bank_account": "1234567890",
-    "cccd": "001202012345"
-  }
+ "unmask_session_id": "ums_01HXABCD",
+ "expires_at_utc": "2026-05-28T11:30:00Z",
+ "audit_id": "aud_01HXABCE",
+ "data": {
+ "bank_account": "1234567890",
+ "cccd": "001202012345"
+ }
 }
 ```
 
@@ -285,20 +284,20 @@ Session valid 30 phút, sau đó field trở lại masked. Reason text được 
 
 ```go
 func RequireScope(scope string) gin.HandlerFunc {
-    return func(c *gin.Context) {
-        claims := c.MustGet("jwt_claims").(*JWTClaims)
-        if !hasScope(claims.Scopes, scope) {
-            c.JSON(403, ProblemDetails{
-                Type:   "/errors/forbidden",
-                Title:  "Insufficient permissions",
-                Status: 403,
-                Detail: fmt.Sprintf("Missing scope: %s", scope),
-            })
-            c.Abort()
-            return
-        }
-        c.Next()
-    }
+ return func(c *gin.Context) {
+ claims := c.MustGet("jwt_claims").(*JWTClaims)
+ if !hasScope(claims.Scopes, scope) {
+ c.JSON(403, ProblemDetails{
+ Type: "/errors/forbidden",
+ Title: "Insufficient permissions",
+ Status: 403,
+ Detail: fmt.Sprintf("Missing scope: %s", scope),
+ })
+ c.Abort
+ return
+ }
+ c.Next
+ }
 }
 
 // Usage
@@ -312,31 +311,31 @@ Beyond scope check, verify ownership:
 
 ```go
 func (h *Handler) GetOrder(c *gin.Context) {
-    claims := c.MustGet("jwt_claims").(*JWTClaims)
-    orderID := c.Param("order_id")
-    
-    order, err := h.svc.GetOrder(c, orderID)
-    if err != nil { ... }
-    
-    if !h.canAccess(claims, order) {
-        c.JSON(403, ProblemDetails{...})
-        return
-    }
-    c.JSON(200, order)
+ claims := c.MustGet("jwt_claims").(*JWTClaims)
+ orderID := c.Param("order_id")
+ 
+ order, err := h.svc.GetOrder(c, orderID)
+ if err != nil { ... }
+ 
+ if !h.canAccess(claims, order) {
+ c.JSON(403, ProblemDetails{...})
+ return
+ }
+ c.JSON(200, order)
 }
 
 func (h *Handler) canAccess(claims *JWTClaims, order *Order) bool {
-    switch claims.Role {
-    case "customer":
-        return order.CustomerID == claims.User.ID
-    case "technician":
-        return order.SurveyAgentID == claims.Ctx.AgentID || order.ExecutionAgentID == claims.Ctx.AgentID
-    case "partner_owner", "partner_manager":
-        return order.PartnerID == claims.Ctx.PartnerID
-    case "ops_admin":
-        return true
-    }
-    return false
+ switch claims.Role {
+ case "customer":
+ return order.CustomerID == claims.User.ID
+ case "technician":
+ return order.SurveyAgentID == claims.Ctx.AgentID || order.ExecutionAgentID == claims.Ctx.AgentID
+ case "partner_owner", "partner_manager":
+ return order.PartnerID == claims.Ctx.PartnerID
+ case "ops_admin":
+ return true
+ }
+ return false
 }
 ```
 
@@ -346,23 +345,23 @@ For list endpoints, inject filter automatically:
 
 ```go
 func (r *OrderRepo) List(ctx context.Context, claims *JWTClaims, filter OrderFilter) ([]*Order, error) {
-    q := sq.Select("*").From("orders")
-    
-    switch claims.Role {
-    case "customer":
-        q = q.Where(sq.Eq{"customer_id": claims.User.ID})
-    case "partner_owner", "partner_manager", "partner_dispatcher":
-        q = q.Where(sq.Eq{"partner_id": claims.Ctx.PartnerID})
-    case "technician":
-        q = q.Where(sq.Or{
-            sq.Eq{"survey_agent_id": claims.Ctx.AgentID},
-            sq.Eq{"execution_agent_id": claims.Ctx.AgentID},
-        })
-    // ops_admin: no filter
-    }
-    
-    // Apply additional filters...
-    return r.query(ctx, q)
+ q := sq.Select("*").From("orders")
+ 
+ switch claims.Role {
+ case "customer":
+ q = q.Where(sq.Eq{"customer_id": claims.User.ID})
+ case "partner_owner", "partner_manager", "partner_dispatcher":
+ q = q.Where(sq.Eq{"partner_id": claims.Ctx.PartnerID})
+ case "technician":
+ q = q.Where(sq.Or{
+ sq.Eq{"survey_agent_id": claims.Ctx.AgentID},
+ sq.Eq{"execution_agent_id": claims.Ctx.AgentID},
+ })
+ // ops_admin: no filter
+ }
+ 
+ // Apply additional filters...
+ return r.query(ctx, q)
 }
 ```
 
@@ -469,20 +468,20 @@ ALL these events MUST audit log:
 Audit log format:
 ```json
 {
-  "audit_id": "aud_01HX",
-  "timestamp": "2026-05-27T08:14:32Z",
-  "actor_type": "user",
-  "actor_id": "usr_01HX",
-  "actor_role": "ops_admin",
-  "action": "agent.kyc.approve",
-  "resource_type": "agent",
-  "resource_id": "agt_T4K9",
-  "ip_address": "210.245.x.x",
-  "user_agent": "...",
-  "request_id": "req_01HX",
-  "result": "success",
-  "before": null,
-  "after": { "kyc_level": "full" }
+ "audit_id": "aud_01HX",
+ "timestamp": "2026-05-27T08:14:32Z",
+ "actor_type": "user",
+ "actor_id": "usr_01HX",
+ "actor_role": "ops_admin",
+ "action": "agent.kyc.approve",
+ "resource_type": "agent",
+ "resource_id": "agt_T4K9",
+ "ip_address": "210.245.x.x",
+ "user_agent": "...",
+ "request_id": "req_01HX",
+ "result": "success",
+ "before": null,
+ "after": { "kyc_level": "full" }
 }
 ```
 
@@ -540,7 +539,7 @@ Scenarios:
 Check on every request:
 ```go
 if redis.Exists(ctx, "blacklist:"+claims.JTI) > 0 {
-    return ErrTokenRevoked
+ return ErrTokenRevoked
 }
 ```
 

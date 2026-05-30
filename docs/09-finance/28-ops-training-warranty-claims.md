@@ -1,10 +1,10 @@
 # Ops Training · Warranty Claim Approval Workflow
 
-> **Audience**: Ops Admin team (Customer Success + Quality)  
-> **Duration**: 2 giờ training + 1 giờ shadow + ongoing weekly review  
-> **Prerequisites**: Đã hoàn tất Admin Web 101 training  
-> **Launch**: Sprint 4 (mid-July 2026) cho pilot 100 customers  
-> **Owner**: Ops Manager · QC Lead  
+> **Audience**: Ops Admin team (Customer Success + Quality) 
+> **Duration**: 2 giờ training + 1 giờ shadow + ongoing weekly review 
+> **Prerequisites**: Đã hoàn tất Admin Web 101 training 
+> **Launch**: Sprint 4 (mid-July 2026) cho pilot 100 customers 
+> **Owner**: Ops Manager · QC Lead 
 > **Last updated**: 2026-05-29
 
 ---
@@ -43,24 +43,24 @@ Warranty package là **business model mới** của SMP. Khác với pay-per-ord
 
 ```text
 ┌─────────────────────────────────────────────────────┐
-│            Customer opens claim                      │
+│ Customer opens claim │
 └────────────────┬────────────────────────────────────┘
-                 ↓
-        ┌────────────────┐
-        │ System auto    │
-        │ validation     │
-        └────────┬───────┘
-                 ↓
-   ┌─────────────┴──────────────┐
-   ↓                            ↓
-[CLEANING claim]          [REPAIR claim]
-   ↓                            ↓
-Auto-approve ✓            Wait Ops review
-(no human needed)          (you here!)
-   ↓                            ↓
-Create free order         Decision: approve OR reject
-                              ↓
-                       Notify customer + agent
+ ↓
+ ┌────────────────┐
+ │ System auto │
+ │ validation │
+ └────────┬───────┘
+ ↓
+ ┌─────────────┴──────────────┐
+ ↓ ↓
+[CLEANING claim] [REPAIR claim]
+ ↓ ↓
+Auto-approve ✓ Wait Ops review
+(no human needed) (you here!)
+ ↓ ↓
+Create free order Decision: approve OR reject
+ ↓
+ Notify customer + agent
 ```
 
 **You only see REPAIR claims trong queue**. Cleaning auto-approve.
@@ -77,15 +77,15 @@ Create free order         Decision: approve OR reject
 
 ```text
 ┌────────────────────────────────────────────────────────┐
-│ Warranty Claims · Pending (5)                          │
+│ Warranty Claims · Pending (5) │
 ├────────────────────────────────────────────────────────┤
-│ Filter: [All ▾] [Pending ▾] [Today ▾]   Sort by: SLA ⬆ │
+│ Filter: [All ▾] [Pending ▾] [Today ▾] Sort by: SLA ⬆ │
 ├────────────────────────────────────────────────────────┤
 │ ⚠️ WC-001234 · 4 min ago · Anh Nguyễn A · AC capacitor │
-│ ⚠️ WC-001233 · 7 min ago · Chị Trần B · Washer belt    │ ← SLA breach soon
-│ 🔴 WC-001232 · 12 min ago · Bác Lê D · Fridge gasket   │ ← SLA breached
-│ 🟢 WC-001231 · 2 min ago · ...                          │
-│ ...                                                     │
+│ ⚠️ WC-001233 · 7 min ago · Chị Trần B · Washer belt │ ← SLA breach soon
+│ 🔴 WC-001232 · 12 min ago · Bác Lê D · Fridge gasket │ ← SLA breached
+│ 🟢 WC-001231 · 2 min ago · ... │
+│ ... │
 └────────────────────────────────────────────────────────┘
 ```
 
@@ -101,7 +101,7 @@ Khi mở 1 claim, đi qua 6 bước theo thứ tự:
 
 ✅ Kiểm tra:
 - `customer_warranty.status = 'active'` (system tự check)
-- `end_date_utc > NOW()` (còn hạn)
+- `end_date_utc > NOW` (còn hạn)
 - Quota count > 0 cho `repair_basic`
 
 ❌ Nếu fail bất kỳ → **REJECT** với reason cụ thể:
@@ -154,7 +154,7 @@ Click "Customer history" tab. Xem:
 ```text
 History claims · Anh Nguyễn A (cust_123):
 - WC-001230 · 5 ngày trước · capacitor · approved → completed
-- WC-001215 · 12 ngày trước · capacitor · approved → completed  ← cùng issue!
+- WC-001215 · 12 ngày trước · capacitor · approved → completed ← cùng issue!
 - WC-001200 · 18 ngày trước · gas_refill · approved → completed
 ```
 
@@ -263,7 +263,7 @@ Package: AC Basic 1y
 Claim type: repair_basic
 Issue selected: capacitor
 BUT description says: "Máy lạnh không lạnh dù tụ thì ok, 
-                       compressor không chạy"
+ compressor không chạy"
 ```
 
 **Decision**: ❌ REJECT
@@ -284,7 +284,7 @@ Customer: Bác Hoàng (cust_321)
 Package: Fridge Basic 1y
 Claim: thermostat
 Description: "Tủ lạnh ngập nước do mưa lớn tuần trước. 
-              Giờ thermostat không hoạt động đúng"
+ Giờ thermostat không hoạt động đúng"
 ```
 
 **Decision**: ❌ REJECT
@@ -338,8 +338,8 @@ Full refill ~1kg cost ~800k VND, không trong scope.
 **Action**:
 1. Approve cho partial refill (cover by gói)
 2. Add note cho thợ: "Customer requested full refill (1kg). 
-   Package covers only partial (0.5kg, max 500k). 
-   Charge customer for excess (additional 0.5kg ≈ 300-400k VND)."
+ Package covers only partial (0.5kg, max 500k). 
+ Charge customer for excess (additional 0.5kg ≈ 300-400k VND)."
 
 **Message to customer**:
 > Gói AC Basic của bạn cover nạp gas bổ sung (< 0.5kg, miễn phí). 
@@ -472,41 +472,41 @@ Xin lỗi vì thời gian chờ và cảm ơn sự kiên nhẫn của anh/chị.
 
 10 câu hỏi (8/10 to pass):
 
-1. **Cooling-off period là bao nhiêu ngày?**  
-   a) 3 b) 5 c) **7** d) 14
+1. **Cooling-off period là bao nhiêu ngày?** 
+ a) 3 b) 5 c) **7** d) 14
 
-2. **KH có 2 máy lạnh, mua 1 gói AC Basic, gói cover bao nhiêu máy?**  
-   a) **1** b) 2 c) Tất cả máy lạnh trong nhà d) Tùy thuộc
+2. **KH có 2 máy lạnh, mua 1 gói AC Basic, gói cover bao nhiêu máy?** 
+ a) **1** b) 2 c) Tất cả máy lạnh trong nhà d) Tùy thuộc
 
-3. **Cleaning claim cần Ops approve không?**  
-   a) Yes b) **No (auto-approve)** c) Chỉ khi cao tần suất d) Chỉ Premium gói
+3. **Cleaning claim cần Ops approve không?** 
+ a) Yes b) **No (auto-approve)** c) Chỉ khi cao tần suất d) Chỉ Premium gói
 
-4. **SLA review claim repair là bao nhiêu phút?**  
-   a) 2 b) **5** c) 15 d) 30
+4. **SLA review claim repair là bao nhiêu phút?** 
+ a) 2 b) **5** c) 15 d) 30
 
-5. **Customer claim "thay block máy lạnh" trong gói AC Basic → quyết định?**  
-   a) Approve nếu còn quota b) **Reject (not in whitelist)** c) Escalate d) Approve partial
+5. **Customer claim "thay block máy lạnh" trong gói AC Basic → quyết định?** 
+ a) Approve nếu còn quota b) **Reject (not in whitelist)** c) Escalate d) Approve partial
 
-6. **KH cancel gói sau 5 ngày dùng → refund?**  
-   a) 0% b) Proportional c) **100% (cooling-off)** d) 50%
+6. **KH cancel gói sau 5 ngày dùng → refund?** 
+ a) 0% b) Proportional c) **100% (cooling-off)** d) 50%
 
-7. **Gói AC Basic cover bao nhiêu issue categories?**  
-   a) 4 b) **6** c) 8 d) Unlimited
+7. **Gói AC Basic cover bao nhiêu issue categories?** 
+ a) 4 b) **6** c) 8 d) Unlimited
 
-8. **Approve sai 1 claim "thay block" → consequences?**  
-   a) Không sao b) Reduce performance score c) Pause approval rights + retrain d) **All of the above (b+c)**
+8. **Approve sai 1 claim "thay block" → consequences?** 
+ a) Không sao b) Reduce performance score c) Pause approval rights + retrain d) **All of the above (b+c)**
 
-9. **Customer có 5 claims trong 30 ngày, cùng issue → action?**  
-   a) Approve · KH dùng quota của họ  
-   b) Reject all  
-   c) **Escalate to Ops Manager**  
-   d) Suspend warranty
+9. **Customer có 5 claims trong 30 ngày, cùng issue → action?** 
+ a) Approve · KH dùng quota của họ 
+ b) Reject all 
+ c) **Escalate to Ops Manager** 
+ d) Suspend warranty
 
-10. **Issue "không tìm thấy trong dropdown" → KH chọn "other" và mô tả. Action?**  
-    a) Auto-reject  
-    b) Approve nếu plausible  
-    c) **Read description carefully, match với whitelist, decide based on actual content**  
-    d) Ask customer to re-submit
+10. **Issue "không tìm thấy trong dropdown" → KH chọn "other" và mô tả. Action?** 
+ a) Auto-reject 
+ b) Approve nếu plausible 
+ c) **Read description carefully, match với whitelist, decide based on actual content** 
+ d) Ask customer to re-submit
 
 **Answer key**: 1c · 2a · 3b · 4b · 5b · 6c · 7b · 8d · 9c · 10c
 
@@ -570,10 +570,10 @@ Ops có hotkey trong Admin Web:
 
 Agenda:
 1. Review last week metrics:
-   - Total claims processed
-   - Approval rate
-   - SLA performance
-   - Escalation rate
+ - Total claims processed
+ - Approval rate
+ - SLA performance
+ - Escalation rate
 2. Audit sample of 5 random claims (each Ops admin)
 3. Edge cases discussion · update playbook nếu cần
 4. New whitelist requests (based on customer feedback)
@@ -601,8 +601,8 @@ Agenda:
 
 ## Sign-off
 
-Trainer (Ops Manager): _________________  Date: ___________
+Trainer (Ops Manager): _________________ Date: ___________
 
-Trainee: _________________  Date: ___________
+Trainee: _________________ Date: ___________
 
 Quiz score: ___/10 · Pass/Fail: _______

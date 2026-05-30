@@ -1,16 +1,11 @@
-# SMP Process Documentation · v3.4
-
-**Phiên bản**: 3.4 · **Ngày**: 2026-05-28 · **Scope**: 21 docs (15 baseline + 3 finance + 3 legal) + Migration Plan
+# SMP Process Documentation
 
 Tài liệu chuẩn hoá process cho team SMP (10+ người · BA, Dev, QC, DevOps, Security, Finance, Legal) sử dụng **Go + MySQL + Redis + MongoDB**.
-
-🚀 **Latest update**: Tích hợp Finance Ledger Spec (Pattern 2 double-entry) + Trust & Legal Policy Pack (PDPL VN compliance) từ Tech Lead review. Migration plan REVISED · 6 phases · 34 weeks. Sẵn sàng v3.5 kick-off.
 
 ---
 
 ## Mục đích
 
-Sau khi product spec v3.1/v3.2/v3.3 đã ổn (UI/UX + business flow), team chuyển sang **execution phase**. Tài liệu này:
 - Chuẩn hoá how-to-build cho 6 vai trò
 - Reference cho onboarding member mới
 - Single source of truth cho decisions kỹ thuật
@@ -18,13 +13,12 @@ Sau khi product spec v3.1/v3.2/v3.3 đã ổn (UI/UX + business flow), team chuy
 
 ---
 
-## Danh sách 16 docs + 1 plan
+## Danh sách docs
 
 ### 🌟 Start here
 | # | Doc | Audience | Purpose |
 |---|---|---|---|
 | **00** | [**System Functional Overview**](./00-system-functional-overview.md) | **All roles** | **Executive summary · gom module + feature + flows + KPIs · đọc đầu tiên trước khi đào sâu** |
-| 🔮 | [**MIGRATION-PLAN-v4.md**](./MIGRATION-PLAN-v4.md) | **Tech Lead, BA Lead, DevOps** | **5-phase plan v3.4 → v4.0 · timeline · risks · rollback · success metrics** |
 
 ### 🏛️ Architecture
 | # | Doc | Audience | Purpose |
@@ -46,7 +40,7 @@ Sau khi product spec v3.1/v3.2/v3.3 đã ổn (UI/UX + business flow), team chuy
 | # | Doc | Audience | Purpose |
 |---|---|---|---|
 | 05 | [Glossary · Thuật ngữ thống nhất](./05-ba/05-glossary.md) | All | VN-EN dictionary cho domain (Service Template, Step, Agent, Partner, BOM, Stage, Dispatch...) |
-| 09 | [User Stories + Acceptance Criteria](./05-ba/09-user-stories.md) | BA, Dev, QC | 6 epics: Customer, Technician, Partner v3.3, Material BOM, Integration, Quality · Gherkin format · DoD · Fibonacci sizing |
+| 09 | [User Stories + Acceptance Criteria](./05-ba/09-user-stories.md) | BA, Dev, QC | 6 epics: Customer, Technician, Partner, Material BOM, Integration, Quality · Gherkin format · DoD · Fibonacci sizing |
 | 14 | [KPI / Metrics Definition](./05-ba/14-kpi-metrics-definition.md) | BA, PM, Data | Formulas cho 30+ metrics: GMV, completion rate, dispatch SLA, agent utilization, partner wallet health · dashboard mapping |
 | 15 | [Business Rules](./05-ba/15-business-rules.md) | All | 80+ rules tập trung: dispatch, pricing, payment, KYC, stages, materials, partners, integration, quality, notifications, retention |
 
@@ -69,14 +63,12 @@ Sau khi product spec v3.1/v3.2/v3.3 đã ổn (UI/UX + business flow), team chuy
 | 12 | [Audit Log Spec](./08-security/12-audit-log-spec.md) | Security, Backend, Compliance | Event categories · schema · naming convention · 7-year retention · query API · tamper resistance · PII handling · compliance mapping (PDPA VN) |
 | 13 | [Data Classification + Encryption Policy](./08-security/13-data-classification-encryption.md) | Security, Backend, DevOps | L0-L4 classification · field encryption (AES-256) · key management (Vault) · TLS · PII display masking · vendor risk · compliance checklist · breach response |
 
-### 💰 Finance (v3.5+ specification · DRAFT)
+### 💰 Finance
 | # | Doc | Audience | Purpose |
 |---|---|---|---|
 | 16 | [Finance Ledger Spec](./09-finance/16-finance-ledger-spec.md) | Finance, Backend, BA | Chart of Accounts · Pattern 2 (control account + subledger dimension) · double-entry bookkeeping · journal templates (gateway/wallet/COD/refund) · rounding rule (residual N=P-C-V) · VAT từ config · ledger↔settlement SoT |
 | 17 | [Payment & Settlement Lifecycle](./09-finance/17-payment-settlement-lifecycle.md) | Backend, Finance, BA, QC | Settlement state machine · 9 states (INIT→AWAITING_GATEWAY→SETTLED→...) · transition matrix · invariants · COD lifecycle (collected→remitted) · 5 lifecycle questions chốt cứng |
-| 18 | [Event Catalog](./09-finance/18-event-catalog.md) | Backend, BA, QC, DevOps | Outbox + DLQ pattern (KHÔNG cần Kafka cho pilot) · envelope schema · 16 events registry · payload contracts (SettlementSettled, CODCollected, RefundSettled) · consumer idempotency · versioning rules |
-
-> **Note**: 3 docs trên là **DRAFT specification** cho v3.5+ implementation. Schema hiện tại (Doc 02) sẽ dual-write vào ledger mới ở Phase v3.5, cutover ở v3.6.
+| 18 | [Event Catalog](./09-finance/18-event-catalog.md) | Backend, BA, QC, DevOps | Outbox + DLQ pattern · envelope schema · 16 events registry · payload contracts (SettlementSettled, CODCollected, RefundSettled) · consumer idempotency · versioning rules |
 
 ### 📜 Legal & Compliance (DRAFT · awaits VN lawyer review)
 | # | Doc | Audience | Purpose |
@@ -98,100 +90,115 @@ Sau khi product spec v3.1/v3.2/v3.3 đã ổn (UI/UX + business flow), team chuy
 2. [05 Glossary](./05-ba/05-glossary.md) — hiểu thuật ngữ
 3. [01 Architecture](./01-architecture/01-architecture.md) — bức tranh tổng
 4. [04 Coding Standards + Setup](./03-backend/04-coding-standards-and-dev-setup.md) — cài máy + chuẩn code
-5. [02 Database Schema](./02-database/02-database-schema.md) — domain mình sẽ làm
-6. [03 API Contract](./03-backend/03-api-contract.md) — contract với FE/other svc
-7. [08 Auth Spec](./08-security/08-auth-spec.md) — security baseline
-8. [15 Business Rules](./05-ba/15-business-rules.md) — không gì khác trừ doc này khi confused
-9. [09 User Stories](./05-ba/09-user-stories.md) — what to build
+5. [03 API Contract](./03-backend/03-api-contract.md) — endpoints
+6. [02 Database Schema](./02-database/02-database-schema.md) — data model
 
-### BA mới onboard
-1. [00 System Functional Overview](./00-system-functional-overview.md) — big picture (45 min)
+### Backend Engineer
+1. Onboarding flow trên
+2. [08 Auth](./08-security/08-auth-spec.md) — JWT + RBAC
+3. [15 Business Rules](./05-ba/15-business-rules.md) — 80+ rules
+4. [16-18 Finance docs](./09-finance/) — ledger + events
+5. [12 Audit Log](./08-security/12-audit-log-spec.md) — observability
+
+### Frontend Engineer
+1. [00 System Overview](./00-system-functional-overview.md)
 2. [05 Glossary](./05-ba/05-glossary.md)
-3. SPEC-v3.md, SPEC-v3.2.md, SPEC-v3.3.md (product specs)
-4. [09 User Stories](./05-ba/09-user-stories.md)
-5. [15 Business Rules](./05-ba/15-business-rules.md)
-6. [14 KPI Metrics](./05-ba/14-kpi-metrics-definition.md)
+3. [03 API Contract](./03-backend/03-api-contract.md)
+4. [08 Auth](./08-security/08-auth-spec.md)
+5. [09 User Stories](./05-ba/09-user-stories.md)
 
-### QC mới onboard
-1. [00 System Functional Overview](./00-system-functional-overview.md) — big picture (45 min)
-2. [05 Glossary](./05-ba/05-glossary.md)
-3. [09 User Stories](./05-ba/09-user-stories.md)
-4. [15 Business Rules](./05-ba/15-business-rules.md)
-5. [10 Test Plan + Cases](./06-qa/10-test-plan-cases.md)
-6. [03 API Contract](./03-backend/03-api-contract.md) (cho API testing)
+### QA Engineer
+1. [00 System Overview](./00-system-functional-overview.md)
+2. [09 User Stories](./05-ba/09-user-stories.md) — acceptance criteria
+3. [15 Business Rules](./05-ba/15-business-rules.md) — edge cases
+4. [10 Test Plan](./06-qa/10-test-plan-cases.md) — test strategy
+5. [11 Runbook](./07-devops/11-runbook-incidents.md) — incident scenarios
 
-### DevOps mới onboard
-1. [00 System Functional Overview](./00-system-functional-overview.md) — big picture (45 min)
+### DevOps / SRE
+1. [00 System Overview](./00-system-functional-overview.md)
 2. [01 Architecture](./01-architecture/01-architecture.md)
 3. [06 Environment Matrix](./07-devops/06-environment-matrix.md)
-4. [07 CI/CD Pipeline](./07-devops/07-ci-cd-pipeline.md)
-5. [11 Runbook Incidents](./07-devops/11-runbook-incidents.md)
-6. [13 Data Classification](./08-security/13-data-classification-encryption.md) (encryption + Vault)
+4. [07 CI/CD](./07-devops/07-ci-cd-pipeline.md)
+5. [11 Runbook](./07-devops/11-runbook-incidents.md)
+6. [13 Data Classification](./08-security/13-data-classification-encryption.md)
 
-### Security review
-1. [00 System Functional Overview](./00-system-functional-overview.md) — big picture (45 min)
-2. [08 Auth Spec](./08-security/08-auth-spec.md)
-3. [12 Audit Log](./08-security/12-audit-log-spec.md)
-4. [13 Data Classification](./08-security/13-data-classification-encryption.md)
-5. [11 Runbook](./07-devops/11-runbook-incidents.md) (incident response)
+### Security Engineer
+1. [00 System Overview](./00-system-functional-overview.md)
+2. [01 Architecture](./01-architecture/01-architecture.md)
+3. [08 Auth Spec](./08-security/08-auth-spec.md)
+4. [12 Audit Log](./08-security/12-audit-log-spec.md)
+5. [13 Data Classification](./08-security/13-data-classification-encryption.md)
+6. [21 PDPL Data Policy](./10-legal/21-pdpl-data-policy.md)
 
-### Finance / Accounting (v3.5+ implementation team)
-1. [00 System Functional Overview](./00-system-functional-overview.md) — big picture (45 min)
-2. [05 Glossary](./05-ba/05-glossary.md) — financial terms first
-3. [16 Finance Ledger Spec](./09-finance/16-finance-ledger-spec.md) — Pattern 2, journal templates, rounding
-4. [17 Payment & Settlement Lifecycle](./09-finance/17-payment-settlement-lifecycle.md) — state machine
-5. [18 Event Catalog](./09-finance/18-event-catalog.md) — events between services
-6. [15 Business Rules](./05-ba/15-business-rules.md) — pricing + payment rules
-7. [20 COD Payment Policy](./10-legal/20-cod-payment-policy.md) — legal context cho COD
+### Finance / Accounting
+1. [00 System Overview](./00-system-functional-overview.md)
+2. [16 Finance Ledger](./09-finance/16-finance-ledger-spec.md)
+3. [17 Payment Lifecycle](./09-finance/17-payment-settlement-lifecycle.md)
+4. [14 KPI Metrics](./05-ba/14-kpi-metrics-definition.md)
+5. [20 COD Policy](./10-legal/20-cod-payment-policy.md)
 
-### Legal / Compliance (DPO, Legal Officer)
-1. [00 System Functional Overview](./00-system-functional-overview.md) — big picture (45 min)
-2. [19 Service Guarantee Policy](./10-legal/19-service-guarantee-policy.md) — warranty/guarantee scope
-3. [20 COD Payment Policy](./10-legal/20-cod-payment-policy.md) — COD legal obligations
-4. [21 PDPL Data Policy](./10-legal/21-pdpl-data-policy.md) — PDPL VN compliance
-5. [13 Data Classification](./08-security/13-data-classification-encryption.md) — technical encryption mapping
-6. [12 Audit Log](./08-security/12-audit-log-spec.md) — PII access tracking
-
-### Stakeholder (CEO, Investor, Partner mới)
-**Đọc Doc 00 + Legal Pack**:
-1. [00 System Functional Overview](./00-system-functional-overview.md) — 30-45 min
-2. [19 Service Guarantee Policy](./10-legal/19-service-guarantee-policy.md) — hiểu commitment với KH
-3. [20 COD Payment Policy](./10-legal/20-cod-payment-policy.md) — hiểu risk model COD
-4. [21 PDPL Data Policy](./10-legal/21-pdpl-data-policy.md) — hiểu data compliance posture
+### BA / Product Manager
+1. [00 System Overview](./00-system-functional-overview.md)
+2. [05 Glossary](./05-ba/05-glossary.md)
+3. [09 User Stories](./05-ba/09-user-stories.md)
+4. [14 KPI Metrics](./05-ba/14-kpi-metrics-definition.md)
+5. [15 Business Rules](./05-ba/15-business-rules.md)
 
 ---
 
-## Cách maintain
+## Cấu trúc thư mục
 
-Doc này là **living document**. Quy trình đóng góp đầy đủ xem [CONTRIBUTING.md](./CONTRIBUTING.md).
+```
+smp-doc-process/
+├── README.md                                 # File này
+├── CONTRIBUTING.md                           # Quy ước đóng góp
+├── DEPLOY-GUIDE.md                           # Hướng dẫn deploy docs site
+├── mkdocs.yml                                # MkDocs Material config
+├── requirements.txt                          # Python deps
+├── requirements-docs.txt                     # Docs build deps
+└── docs/
+    ├── index.md                              # Landing page
+    ├── 00-system-functional-overview.md      # Executive summary
+    ├── 01-architecture/                      # C4 + service catalog
+    ├── 02-database/                          # ERD + DDL + Mongo + Redis
+    ├── 03-backend/                           # API + coding standards
+    ├── 05-ba/                                # Glossary, user stories, KPI, rules
+    ├── 06-qa/                                # Test plan + cases
+    ├── 06-frontend/                          # Mobile wireframes + mockups
+    ├── 07-devops/                            # Env matrix, CI/CD, runbook
+    ├── 08-security/                          # Auth, audit log, data classification
+    ├── 09-finance/                           # Ledger, lifecycle, events
+    └── 10-legal/                             # Service guarantee, COD, PDPL
+```
 
-Tóm tắt:
-1. PR vào repo `smp-doc-process`
-2. Reviewer = 1 dev + 1 BA (cross-discipline)
-3. Update version + changelog ở dưới
-4. Notify team qua Slack `#engineering-docs`
+---
 
-## Deploy / Setup
+## Documentation site
 
-Lần đầu push lên GitHub: xem [DEPLOY-GUIDE.md](./DEPLOY-GUIDE.md).
+Docs được build bằng **MkDocs Material** và deploy tự động tại:
 
-Repo URL: https://github.com/trungnguyenchanh/smp-doc-process
+🌐 **https://smp-doc-process.pages.dev/**
 
-**Site đẹp** (sau khi setup MkDocs · xem DEPLOY-GUIDE): https://trungnguyenchanh.github.io/smp-doc-process/
+Build local:
+```bash
+pip install -r requirements-docs.txt
+mkdocs serve
+# → http://localhost:8000
+```
 
-## Phase 2 docs (chưa build · Batch C)
+Xem chi tiết deployment tại [DEPLOY-GUIDE.md](./DEPLOY-GUIDE.md).
 
-Khi đi GA cần thêm:
-- Threat model (STRIDE per service)
-- Performance test results + capacity planning
-- Disaster recovery plan (RPO/RTO)
-- Compliance checklist (đầy đủ PDPA + financial)
-- Privacy policy + ToS (legal review)
-- C4 Level 3 component diagrams chi tiết
-- ADRs đầy đủ (architecture decision records)
+---
 
-## Changelog
+## Đóng góp
 
-| Version | Date | Change | Author |
-|---|---|---|---|
-| 3.4 | 2026-05-27 | Initial · 15 docs Batch A+B | Team SMP |
+Xem [CONTRIBUTING.md](./CONTRIBUTING.md) cho quy ước:
+- Markdown style
+- Naming convention cho doc mới
+- PR review process
+
+---
+
+## License
+
+Internal Use Only · © 2026 SMP Team

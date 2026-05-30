@@ -1,26 +1,5 @@
-<!-- 
-  ────────────────────────────────────────────────────────────────
-  📋 DOC STATUS NOTE
-  
-  Đây là tách từ trust-legal-policy-pack-v1.md (Section C + D).
-  Tập trung vào PDPL VN (Luật 91/2025/QH15 + NĐ 356/2025).
-  
-  ⚠️ STATUS: DRAFT · bắt buộc legal review (luật sư VN) trước công bố.
-  
-  Related docs:
-    - Doc 19 · Service Guarantee Policy
-    - Doc 20 · COD Payment Policy
-    - Doc 12 · Audit Log Spec (PII access tracking)
-    - Doc 13 · Data Classification + Encryption (technical implementation)
-  
-  Author: SMP Tech Lead/CTO · Date: 2026-05-28
-  Status: DRAFT v1.0
-  ────────────────────────────────────────────────────────────────
--->
-
-# Doc 21 · PDPL Data Policy · v1.0 (DRAFT)
-
-**Version**: 1.0 · **Date**: 2026-05-28 · **Status**: DRAFT — **bắt buộc legal review (luật sư VN) trước khi công bố/áp dụng** · **Audience**: Legal, DPO, Security, Backend, Ops
+# Doc 21 · PDPL Data Policy · DRAFT
+**Status**: DRAFT — **bắt buộc legal review (luật sư VN) trước khi công bố/áp dụng** · **Audience**: Legal, DPO, Security, Backend, Ops
 
 > ⚠️ **Disclaimer**: Đây là bản thảo do team soạn để định hình chính sách, **không phải tư vấn pháp lý**. Mọi điều khoản công bố cho KH/thợ/partner phải qua luật sư VN rà soát.
 
@@ -62,7 +41,7 @@ KH/thợ có quyền truy cập, chỉnh sửa, xóa, rút đồng ý, phản đ
 - [ ] **DPA với vendor** (chat/call provider, payment gateway, cloud).
 - [ ] **DPIA/TIA** nếu áp dụng (xử lý nhạy cảm, chuyển xuyên biên giới).
 - [ ] **Access audit log** (ai xem PII, khi nào) — đặc biệt unmask SĐT/bank.
-  - Implementation: xem [Doc 12 · Audit Log Spec](../08-security/12-audit-log-spec.md).
+ - Implementation: xem [Doc 12 · Audit Log Spec](../08-security/12-audit-log-spec.md).
 - [ ] Đánh giá **chuyển dữ liệu xuyên biên giới** (nếu dùng cloud/vendor ngoài VN) — rủi ro phạt 5% doanh thu.
 - [ ] Bổ nhiệm nhân sự bảo vệ dữ liệu đạt yêu cầu (PDPL nâng yêu cầu năng lực so NĐ 13).
 

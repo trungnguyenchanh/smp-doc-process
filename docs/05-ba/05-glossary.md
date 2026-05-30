@@ -1,5 +1,4 @@
 # SMP Glossary · Thuật ngữ thống nhất
-
 **Audience**: All roles · BA, Dev, QC, DevOps, Security · **Updated**: v3.3
 
 Bảng tra cứu thuật ngữ. Khi viết doc, comment code, hoặc giao tiếp team, dùng thống nhất các thuật ngữ này.
@@ -19,7 +18,7 @@ Bảng tra cứu thuật ngữ. Khi viết doc, comment code, hoặc giao tiếp
 | **Stage** | Giai đoạn của đơn hàng (01_created → 10_rated) | `orders.current_stage` | 10 stages trong v3.1 |
 | **Agent** | Thợ thực hiện công việc | `agents`, `Agent` | KYC required, có skill matrix |
 | **Customer** | Khách hàng cuối cá nhân | Ref `customer_id` to inside | SMP không own data |
-| **Partner** | Đối tác B2B hoặc cá nhân lớn (v3.3) | `partners`, `Partner` | 3 types: A, B, AB |
+| **Partner** | Đối tác B2B hoặc cá nhân lớn | `partners`, `Partner` | 3 types: A, B, AB |
 | **End Customer** | Khách cuối của partner (vd cư dân Vinhomes) | `orders.end_customer_id` | Khác Customer (account holder) |
 | **Material Type** | Loại vật tư (vd "Tụ điện 35μF") | `material_types` | Cha — generic |
 | **Material Variant** | SKU cụ thể (vd "Sanyo CBB60-35") | `material_variants` | Con — có brand, model, giá |
@@ -31,16 +30,16 @@ Bảng tra cứu thuật ngữ. Khi viết doc, comment code, hoặc giao tiếp
 
 | Thuật ngữ | Định nghĩa |
 |---|---|
-| **Survey Agent (SUR)** | Thợ đi khảo sát trước (v3.1) — thu thông tin, ảnh, báo giá. Color: violet `#5b21b6` |
+| **Survey Agent (SUR)** | Thợ đi khảo sát trước — thu thông tin, ảnh, báo giá. Color: violet `#5b21b6` |
 | **Execution Agent (EXC)** | Thợ đi thực hiện sửa chữa sau khi khách duyệt báo giá. Color: teal `#1D9E75` |
 | **Dual Agent** | 1 thợ đảm nhận cả Survey + Execution (cùng người) |
 | **Pool Agent** | Thợ trong pool dispatch chung, chưa assign |
-| **Lead Agent** (v3.5+) | Thợ chính của 1 `order_step` · exactly 1 per step · chịu warranty liability per BR-MA-006. Có quyền invite helpers, override split |
-| **Helper Agent** (v3.5+) | Thợ phụ generic (không cần specialty) · hỗ trợ lead trong 1 step · KHÔNG chịu warranty liability |
-| **Specialist Agent** (v3.5+) | Thợ chuyên môn cụ thể (vd electrician, plumber) · tham gia step cần skill đó · KHÔNG chịu warranty (trừ exception per BR-MA-006) |
-| **Primary Lead** (v3.5+) | Lead của step quan trọng nhất trong order (default = step có weight cao nhất) · `orders.primary_lead_agent_id` · chịu warranty cho toàn order |
-| **Split Ratio (split_bps)** (v3.5+) | Tỉ lệ chia tiền giữa các agents trong 1 step · basis points (10000 = 100%) · SUM per step MUST = 10000 |
-| **Step Weight (step_weight_bps)** (v3.5+) | Tỉ trọng giá trị của 1 step trong order · basis points · SUM per order MUST = 10000 |
+| **Lead Agent**  | Thợ chính của 1 `order_step` · exactly 1 per step · chịu warranty liability per BR-MA-006. Có quyền invite helpers, override split |
+| **Helper Agent**  | Thợ phụ generic (không cần specialty) · hỗ trợ lead trong 1 step · KHÔNG chịu warranty liability |
+| **Specialist Agent**  | Thợ chuyên môn cụ thể (vd electrician, plumber) · tham gia step cần skill đó · KHÔNG chịu warranty (trừ exception per BR-MA-006) |
+| **Primary Lead**  | Lead của step quan trọng nhất trong order (default = step có weight cao nhất) · `orders.primary_lead_agent_id` · chịu warranty cho toàn order |
+| **Split Ratio (split_bps)**  | Tỉ lệ chia tiền giữa các agents trong 1 step · basis points (10000 = 100%) · SUM per step MUST = 10000 |
+| **Step Weight (step_weight_bps)**  | Tỉ trọng giá trị của 1 step trong order · basis points · SUM per order MUST = 10000 |
 
 ## C · Dispatch terminology
 
@@ -51,11 +50,11 @@ Bảng tra cứu thuật ngữ. Khi viết doc, comment code, hoặc giao tiếp
 | **Invitation** | Lời mời thợ nhận đơn (push notification) |
 | **Auto dispatch** | Hệ thống tự assign agent đầu tiên accept |
 | **Pool dispatch** | Đơn show trong "Pool" tab cho thợ tự chọn |
-| **Private dispatch** | Đơn chỉ dispatch cho thợ của 1 partner cụ thể (v3.3) |
+| **Private dispatch** | Đơn chỉ dispatch cho thợ của 1 partner cụ thể |
 | **Open dispatch** | Đơn dispatch cho mọi thợ qualified (default) |
 | **Escalate** | Sau N rounds fail → đơn chuyển sang ops handle thủ công |
 
-## D · Partner concepts (v3.3)
+## D · Partner concepts 
 
 | Thuật ngữ | Định nghĩa |
 |---|---|
@@ -72,7 +71,7 @@ Bảng tra cứu thuật ngữ. Khi viết doc, comment code, hoặc giao tiếp
 | **Via-partner payout** | Tiền công thợ → SMP trả vào TK partner, partner trả thợ off-platform |
 | **Journey mode** | `full_10steps` (khách thấy app SMP) hoặc `minimal` (B2B, khách không thấy app) |
 
-## E · Integration terms (v3.2)
+## E · Integration terms 
 
 | Thuật ngữ | Định nghĩa |
 |---|---|
@@ -98,14 +97,14 @@ Bảng tra cứu thuật ngữ. Khi viết doc, comment code, hoặc giao tiếp
 | **Commission** | % SMP rút từ doanh thu thợ |
 | **Payout** | Khoản tiền SMP trả thợ/partner định kỳ |
 | **Outstanding invoice** | Hoá đơn đã xuất chưa thu |
-| **Deferred revenue** (v3.5+) | Doanh thu đã thu tiền nhưng chưa được công nhận (vd gói BH 12 tháng) · liability trên balance sheet · recognize dần theo thời gian theo VAS 14 |
-| **Revenue recognition** (v3.5+) | Quá trình chuyển deferred_revenue → revenue theo period (tháng) · cron job monthly · per warranty `total_amount_recognized` increment |
-| **Warranty package** (v3.5+) | Gói thuê bao bảo trì + sửa chữa KH mua trước cho thiết bị có sẵn · vd "Bảo trì AC 1 năm" · KHÔNG phải insurance |
-| **Embedded warranty** (v3.5+) | Bảo hành kèm theo order (default 1 tháng) · khác với warranty package |
-| **Quota** (v3.5+) | Số lần KH được dùng dịch vụ trong gói · vd 4 lần vệ sinh/năm |
-| **Warranty claim** (v3.5+) | Mỗi lần KH yêu cầu sử dụng gói · cần quota check + (nếu repair) Ops approval |
-| **Cooling-off period** (v3.5+) | 7 ngày đầu KH có thể cancel gói + refund 100% (no reasons asked) |
-| **Free-of-charge order** (v3.5+) | Order tạo từ warranty claim · `amount_charged=0` · agent vẫn earn từ warranty fund |
+| **Deferred revenue**  | Doanh thu đã thu tiền nhưng chưa được công nhận (vd gói BH 12 tháng) · liability trên balance sheet · recognize dần theo thời gian theo VAS 14 |
+| **Revenue recognition**  | Quá trình chuyển deferred_revenue → revenue theo period (tháng) · cron job monthly · per warranty `total_amount_recognized` increment |
+| **Warranty package**  | Gói thuê bao bảo trì + sửa chữa KH mua trước cho thiết bị có sẵn · vd "Bảo trì AC 1 năm" · KHÔNG phải insurance |
+| **Embedded warranty**  | Bảo hành kèm theo order (default 1 tháng) · khác với warranty package |
+| **Quota**  | Số lần KH được dùng dịch vụ trong gói · vd 4 lần vệ sinh/năm |
+| **Warranty claim**  | Mỗi lần KH yêu cầu sử dụng gói · cần quota check + (nếu repair) Ops approval |
+| **Cooling-off period**  | 7 ngày đầu KH có thể cancel gói + refund 100% (no reasons asked) |
+| **Free-of-charge order**  | Order tạo từ warranty claim · `amount_charged=0` · agent vẫn earn từ warranty fund |
 
 ## G · Quality & operations
 

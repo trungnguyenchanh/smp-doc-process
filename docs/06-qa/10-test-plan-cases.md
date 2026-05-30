@@ -1,5 +1,4 @@
 # SMP QA · Test Plan + Test Cases + Bug Template
-
 **Audience**: QC/QA team · **Updated**: v3.3
 
 ---
@@ -92,22 +91,22 @@ Module: Order
 Type: Functional / Positive
 Priority: P0 (critical)
 Pre-condition:
-  - Customer login với account "Nguyễn Văn A"
-  - Customer có địa chỉ "15 Lê Lợi, Q.1, HCMC"
-  - Service "Sửa điều hoà" đã được active
-  - Có ≥ 1 thợ qualified online ở Q.1
+ - Customer login với account "Nguyễn Văn A"
+ - Customer có địa chỉ "15 Lê Lợi, Q.1, HCMC"
+ - Service "Sửa điều hoà" đã được active
+ - Có ≥ 1 thợ qualified online ở Q.1
 Steps:
-  1. Mở app SMP mobile
-  2. Tap "Đặt dịch vụ" → "Sửa điều hoà"
-  3. Confirm địa chỉ mặc định "15 Lê Lợi"
-  4. Nhập note "Máy không lạnh"
-  5. Tap "Đặt ngay"
+ 1. Mở app SMP mobile
+ 2. Tap "Đặt dịch vụ" → "Sửa điều hoà"
+ 3. Confirm địa chỉ mặc định "15 Lê Lợi"
+ 4. Nhập note "Máy không lạnh"
+ 5. Tap "Đặt ngay"
 Expected:
-  - Đơn tạo thành công với order_id dạng "ord_..."
-  - current_stage = "01_created"
-  - UI redirect sang trang tracking
-  - Sau 5 giây, dispatch trigger, current_stage = "02_dispatched_survey"
-  - Push notification "Đang tìm thợ" gửi tới customer
+ - Đơn tạo thành công với order_id dạng "ord_..."
+ - current_stage = "01_created"
+ - UI redirect sang trang tracking
+ - Sau 5 giây, dispatch trigger, current_stage = "02_dispatched_survey"
+ - Push notification "Đang tìm thợ" gửi tới customer
 Actual: <fill khi execute>
 Status: Pass / Fail / Blocked
 Defect ID: <link bug nếu fail>
@@ -150,7 +149,7 @@ Như mẫu trên.
 **Steps**: Customer cancel cùng lúc agent accept
 **Expected**: Atomic: 1 thắng. Nếu cancel thắng, agent nhận "Đơn đã huỷ". Nếu accept thắng, customer nhận "Không huỷ được, thợ đã accept".
 
-## 6. Test cases sample · Partner platform (v3.3)
+## 6. Test cases sample · Partner platform 
 
 ### TC-PARTNER-001 · Partner Owner đặt đơn private dispatch (P0)
 **Pre**: Login Partner Owner "Hùng AC Service", 8 agents qualified, wallet 8,500,000đ
@@ -205,7 +204,7 @@ Như mẫu trên.
 **Steps**: Tắt wifi của T4K9 trong lúc 60s window
 **Expected**: Server detect disconnect sau 30s, không count T4K9 vào candidates round này
 
-## 8. Test cases · Material BOM (v3.2)
+## 8. Test cases · Material BOM 
 
 ### TC-BOM-001 · Tạo material variant với margin auto-calc (P1)
 **Pre**: Material_type "Tụ điện 35μF" tồn tại, wms có SKU SKU-CAP-SAN-35 với cost 50k
@@ -273,28 +272,28 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 export let options = {
-  stages: [
-    { duration: '2m', target: 50 },   // ramp up
-    { duration: '5m', target: 100 },  // steady
-    { duration: '2m', target: 200 },  // spike
-    { duration: '5m', target: 100 },  // back to steady
-    { duration: '2m', target: 0 },    // ramp down
-  ],
-  thresholds: {
-    http_req_duration: ['p(95)<500', 'p(99)<1500'],
-    http_req_failed: ['rate<0.01'],
-  },
+ stages: [
+ { duration: '2m', target: 50 }, // ramp up
+ { duration: '5m', target: 100 }, // steady
+ { duration: '2m', target: 200 }, // spike
+ { duration: '5m', target: 100 }, // back to steady
+ { duration: '2m', target: 0 }, // ramp down
+ ],
+ thresholds: {
+ http_req_duration: ['p(95)<500', 'p(99)<1500'],
+ http_req_failed: ['rate<0.01'],
+ },
 };
 
-export default function() {
-  const res = http.get('https://staging-api.smp.vn/api/v1/orders?limit=20', {
-    headers: { Authorization: `Bearer ${__ENV.TOKEN}` },
-  });
-  check(res, {
-    'status 200': r => r.status === 200,
-    'has items': r => JSON.parse(r.body).items !== undefined,
-  });
-  sleep(1);
+export default function {
+ const res = http.get('https://staging-api.smp.vn/api/v1/orders?limit=20', {
+ headers: { Authorization: `Bearer ${__ENV.TOKEN}` },
+ });
+ check(res, {
+ 'status 200': r => r.status === 200,
+ 'has items': r => JSON.parse(r.body).items !== undefined,
+ });
+ sleep(1);
 }
 ```
 
@@ -325,35 +324,35 @@ Module: Partner > Wallet
 Reproducibility: Always / Often / Sometimes / Once
 
 Environment:
-  - Build: v3.3.0-rc.2
-  - Env: staging
-  - Browser/App: Chrome 124 / iOS 17
+ - Build: v3.3.0-rc.2
+ - Env: staging
+ - Browser/App: Chrome 124 / iOS 17
 
 Pre-condition:
-  - Login partner_finance "Hùng AC Service"
-  - Wallet balance 500,000đ
+ - Login partner_finance "Hùng AC Service"
+ - Wallet balance 500,000đ
 
 Steps to reproduce:
-  1. Mở "Tài chính" → "Ví"
-  2. Tap "Nạp tiền"
-  3. Chọn "Chuyển khoản ngân hàng"
-  4. Nhập amount 5,000,000đ
-  5. Tap "Tạo yêu cầu"
+ 1. Mở "Tài chính" → "Ví"
+ 2. Tap "Nạp tiền"
+ 3. Chọn "Chuyển khoản ngân hàng"
+ 4. Nhập amount 5,000,000đ
+ 5. Tap "Tạo yêu cầu"
 
 Expected:
-  - Tạo wallet_transaction row với type = "topup", status = "pending"
-  - Hiển thị QR code chuyển khoản
-  - Status quay về "pending bank confirmation"
+ - Tạo wallet_transaction row với type = "topup", status = "pending"
+ - Hiển thị QR code chuyển khoản
+ - Status quay về "pending bank confirmation"
 
 Actual:
-  - API 500 internal_error
-  - UI hiển thị "Có lỗi xảy ra, vui lòng thử lại"
-  - Backend log: `nil pointer dereference at wallet/service.go:142`
+ - API 500 internal_error
+ - UI hiển thị "Có lỗi xảy ra, vui lòng thử lại"
+ - Backend log: `nil pointer dereference at wallet/service.go:142`
 
 Attachments:
-  - screenshot_500.png
-  - har_export.har
-  - backend_log_snippet.txt
+ - screenshot_500.png
+ - har_export.har
+ - backend_log_snippet.txt
 
 Workaround: None
 

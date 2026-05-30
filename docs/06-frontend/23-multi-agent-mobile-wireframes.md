@@ -1,9 +1,9 @@
-# Mobile UX Wireframes · Multi-Agent Step Assignment (v3.5+)
+# Mobile UX Wireframes · Multi-Agent Step Assignment 
 
-> **Status**: DRAFT for Mobile UX review  
-> **Date**: 2026-05-29  
-> **Audience**: Mobile Lead + Mobile Dev + Founder review  
-> **Format**: ASCII wireframes + interaction flows  
+> **Status**: DRAFT for Mobile UX review 
+> **Date**: 2026-05-29 
+> **Audience**: Mobile Lead + Mobile Dev + Founder review 
+> **Format**: ASCII wireframes + interaction flows 
 > **Reference**: [Doc 09 Epic 7 User Stories](../05-ba/09-user-stories.md), [Doc 15 Section Q Rules](../05-ba/15-business-rules.md)
 
 ---
@@ -12,40 +12,40 @@
 
 ```text
 ┌─────────────────────────────────────────┐
-│ ←  Step 3 · Lắp đặt              ⓘ     │ ← header với info icon
+│ ← Step 3 · Lắp đặt ⓘ │ ← header với info icon
 ├─────────────────────────────────────────┤
-│                                          │
-│ Đơn #ORD-456                            │
-│ KH: Anh Nguyễn Văn A                    │
-│ ⏰ Bắt đầu: 10:30 hôm nay               │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ 💰 Doanh thu step này                   │
-│ 300,000 VND (30% của đơn 1,000,000)    │
-│                                          │
-│ Bạn nhận: 300,000 VND (100%)            │
-│ ⭐ Bạn là Lead                          │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ 👥 Team (1 người)                       │
-│                                          │
+│ │
+│ Đơn #ORD-456 │
+│ KH: Anh Nguyễn Văn A │
+│ ⏰ Bắt đầu: 10:30 hôm nay │
+│ │
+│ ───────────────────────────── │
+│ │
+│ 💰 Doanh thu step này │
+│ 300,000 VND (30% của đơn 1,000,000) │
+│ │
+│ Bạn nhận: 300,000 VND (100%) │
+│ ⭐ Bạn là Lead │
+│ │
+│ ───────────────────────────── │
+│ │
+│ 👥 Team (1 người) │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 🌟 Bạn                              │ │
-│ │    Lead · 100% · 300,000 VND        │ │
-│ │    Đang làm                          │ │
+│ │ 🌟 Bạn │ │
+│ │ Lead · 100% · 300,000 VND │ │
+│ │ Đang làm │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ ➕ Mời thợ phụ                       │ │ ← CTA button
-│ │    (helper hoặc thợ chuyên môn)     │ │
+│ │ ➕ Mời thợ phụ │ │ ← CTA button
+│ │ (helper hoặc thợ chuyên môn) │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ [ ✅ Hoàn thành step ]                  │ ← primary action
-│                                          │
+│ │
+│ ───────────────────────────── │
+│ │
+│ [ ✅ Hoàn thành step ] │ ← primary action
+│ │
 └─────────────────────────────────────────┘
 ```
 
@@ -59,44 +59,44 @@
 
 ```text
 ┌─────────────────────────────────────────┐
-│ ✕  Mời thợ phụ                          │
+│ ✕ Mời thợ phụ │
 ├─────────────────────────────────────────┤
-│                                          │
-│ Loại thợ                                 │
+│ │
+│ Loại thợ │
 │ ┌─────────────────────────────────────┐ │
-│ │ ○ Thợ phụ (helper)                  │ │ ← radio
-│ │ ● Thợ chuyên môn (specialist) ✓     │ │
+│ │ ○ Thợ phụ (helper) │ │ ← radio
+│ │ ● Thợ chuyên môn (specialist) ✓ │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ Chuyên môn (nếu specialist)             │
+│ │
+│ Chuyên môn (nếu specialist) │
 │ ┌─────────────────────────────────────┐ │
-│ │ ⚡ Thợ điện (electrician)      ✓    │ │ ← dropdown selected
+│ │ ⚡ Thợ điện (electrician) ✓ │ │ ← dropdown selected
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ Thợ gần đây · sẵn sàng nhận             │
-│                                          │
+│ │
+│ ───────────────────────────── │
+│ │
+│ Thợ gần đây · sẵn sàng nhận │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 👤 Anh Trần B                  ⭐ 4.8│ │
-│ │    Cách 2.3km · L3 electrician     │ │
-│ │    [ Mời ]                          │ │ ← invite button
+│ │ 👤 Anh Trần B ⭐ 4.8│ │
+│ │ Cách 2.3km · L3 electrician │ │
+│ │ [ Mời ] │ │ ← invite button
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 👤 Anh Lê C                    ⭐ 4.5│ │
-│ │    Cách 3.1km · L2 electrician     │ │
-│ │    [ Mời ]                          │ │
+│ │ 👤 Anh Lê C ⭐ 4.5│ │
+│ │ Cách 3.1km · L2 electrician │ │
+│ │ [ Mời ] │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 👤 Anh Phạm D                  ⭐ 4.9│ │
-│ │    Cách 5.0km · L4 electrician     │ │
-│ │    [ Mời ]                          │ │
+│ │ 👤 Anh Phạm D ⭐ 4.9│ │
+│ │ Cách 5.0km · L4 electrician │ │
+│ │ [ Mời ] │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ [ Xem thêm thợ ↓ ]                      │
-│                                          │
+│ │
+│ [ Xem thêm thợ ↓ ] │
+│ │
 └─────────────────────────────────────────┘
 ```
 
@@ -111,37 +111,37 @@
 
 ```text
 ┌─────────────────────────────────────────┐
-│ ← Mời thợ Trần B · Set tỉ lệ            │
+│ ← Mời thợ Trần B · Set tỉ lệ │
 ├─────────────────────────────────────────┤
-│                                          │
-│ Chia tiền cho team (tổng = 100%)         │
-│                                          │
+│ │
+│ Chia tiền cho team (tổng = 100%) │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 🌟 Bạn (Lead)                       │ │
-│ │    [  60%  ]  ←──→  180,000 VND     │ │ ← slider
-│ │                                      │ │
+│ │ 🌟 Bạn (Lead) │ │
+│ │ [ 60% ] ←──→ 180,000 VND │ │ ← slider
+│ │ │ │
 │ ├─────────────────────────────────────┤ │
-│ │ ⚡ Anh Trần B (Electrician)         │ │
-│ │    [  40%  ]  ←──→  120,000 VND     │ │
+│ │ ⚡ Anh Trần B (Electrician) │ │
+│ │ [ 40% ] ←──→ 120,000 VND │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ ✓ Tổng: 100% (300,000 VND)             │ ← validation OK
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ Mặc định service "Sửa máy lạnh":        │ ← hint
-│ Lead 50% · Electrician 50%              │
-│ [ Reset về mặc định ]                   │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ Lý do tùy chỉnh (optional)              │
+│ │
+│ ✓ Tổng: 100% (300,000 VND) │ ← validation OK
+│ │
+│ ───────────────────────────── │
+│ │
+│ Mặc định service "Sửa máy lạnh": │ ← hint
+│ Lead 50% · Electrician 50% │
+│ [ Reset về mặc định ] │
+│ │
+│ ───────────────────────────── │
+│ │
+│ Lý do tùy chỉnh (optional) │
 │ ┌─────────────────────────────────────┐ │
-│ │ Tôi làm phần khó hơn _________      │ │
+│ │ Tôi làm phần khó hơn _________ │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ [ Hủy ]            [ ✉️ Gửi lời mời ]  │
-│                                          │
+│ │
+│ [ Hủy ] [ ✉️ Gửi lời mời ] │
+│ │
 └─────────────────────────────────────────┘
 ```
 
@@ -160,41 +160,41 @@
 
 ```text
 ┌─────────────────────────────────────────┐
-│ ←  Step 3 · Lắp đặt              ⓘ     │
+│ ← Step 3 · Lắp đặt ⓘ │
 ├─────────────────────────────────────────┤
-│                                          │
-│ 💰 Doanh thu step này                   │
-│ 300,000 VND                              │
-│                                          │
-│ Bạn nhận: 180,000 VND (60%)             │
-│ ⭐ Bạn là Lead                          │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ 👥 Team (2 người)                  [ ⚙️ ]│ ← settings = adjust splits
-│                                          │
+│ │
+│ 💰 Doanh thu step này │
+│ 300,000 VND │
+│ │
+│ Bạn nhận: 180,000 VND (60%) │
+│ ⭐ Bạn là Lead │
+│ │
+│ ───────────────────────────── │
+│ │
+│ 👥 Team (2 người) [ ⚙️ ]│ ← settings = adjust splits
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 🌟 Bạn                              │ │
-│ │    Lead · 60% · 180,000 VND         │ │
-│ │    Đang làm                          │ │
+│ │ 🌟 Bạn │ │
+│ │ Lead · 60% · 180,000 VND │ │
+│ │ Đang làm │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ ⚡ Anh Trần B (Electrician)         │ │
-│ │    Specialist · 40% · 120,000 VND   │ │
-│ │    ✅ Đã accept                     │ │
-│ │                                      │ │
-│ │    [ Xóa khỏi step ] [ Đổi tỉ lệ ] │ │ ← lead actions
+│ │ ⚡ Anh Trần B (Electrician) │ │
+│ │ Specialist · 40% · 120,000 VND │ │
+│ │ ✅ Đã accept │ │
+│ │ │ │
+│ │ [ Xóa khỏi step ] [ Đổi tỉ lệ ] │ │ ← lead actions
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ ➕ Mời thêm thợ phụ                  │ │
+│ │ ➕ Mời thêm thợ phụ │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ [ ✅ Hoàn thành step ]                  │
-│                                          │
+│ │
+│ ───────────────────────────── │
+│ │
+│ [ ✅ Hoàn thành step ] │
+│ │
 └─────────────────────────────────────────┘
 ```
 
@@ -204,41 +204,41 @@
 
 ```text
 ┌─────────────────────────────────────────┐
-│ ←  Step 3 · Lắp đặt              ⓘ     │
+│ ← Step 3 · Lắp đặt ⓘ │
 ├─────────────────────────────────────────┤
-│                                          │
-│ Đơn #ORD-456                            │
-│ KH: Anh Nguyễn Văn A                    │
-│ ⏰ Bắt đầu: 10:30 hôm nay               │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ 💰 Bạn nhận                              │
-│ 120,000 VND (40% của step này)          │
-│                                          │
-│ Vai trò: Specialist · Electrician        │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ 👤 Lead của step                         │
-│                                          │
+│ │
+│ Đơn #ORD-456 │
+│ KH: Anh Nguyễn Văn A │
+│ ⏰ Bắt đầu: 10:30 hôm nay │
+│ │
+│ ───────────────────────────── │
+│ │
+│ 💰 Bạn nhận │
+│ 120,000 VND (40% của step này) │
+│ │
+│ Vai trò: Specialist · Electrician │
+│ │
+│ ───────────────────────────── │
+│ │
+│ 👤 Lead của step │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 🌟 Anh Trần A                       │ │
-│ │    Lead · L4                        │ │
-│ │    📞 Gọi  💬 Chat                  │ │ ← contact actions
+│ │ 🌟 Anh Trần A │ │
+│ │ Lead · L4 │ │
+│ │ 📞 Gọi 💬 Chat │ │ ← contact actions
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ ⓘ Tỉ lệ chia tiền do Lead quyết định    │ ← privacy note
-│   Bạn không xem được tỉ lệ của          │
-│   các thợ khác.                          │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ Trạng thái: ✅ Đã accept                │
-│ [ Bắt đầu làm việc ]                    │
-│                                          │
+│ │
+│ ───────────────────────────── │
+│ │
+│ ⓘ Tỉ lệ chia tiền do Lead quyết định │ ← privacy note
+│ Bạn không xem được tỉ lệ của │
+│ các thợ khác. │
+│ │
+│ ───────────────────────────── │
+│ │
+│ Trạng thái: ✅ Đã accept │
+│ [ Bắt đầu làm việc ] │
+│ │
 └─────────────────────────────────────────┘
 ```
 
@@ -250,28 +250,28 @@
 
 ```text
 ┌─────────────────────────────────────────┐
-│  🔔 Lời mời mới · 30 phút còn lại       │ ← timer
+│ 🔔 Lời mời mới · 30 phút còn lại │ ← timer
 ├─────────────────────────────────────────┤
-│                                          │
-│ Anh Trần A mời bạn vào step             │
-│ "Lắp đặt" của đơn #ORD-456              │
-│                                          │
+│ │
+│ Anh Trần A mời bạn vào step │
+│ "Lắp đặt" của đơn #ORD-456 │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 📍 Quận 7, TP.HCM (cách 2.3km)     │ │
-│ │ ⏰ Bắt đầu: 10:30 hôm nay           │ │
-│ │ ⏱️ Dự kiến: 1h                      │ │
-│ │ 🛠️ Vai trò: Electrician            │ │
-│ │                                      │ │
-│ │ 💰 Bạn nhận: 120,000 VND (40%)     │ │
+│ │ 📍 Quận 7, TP.HCM (cách 2.3km) │ │
+│ │ ⏰ Bắt đầu: 10:30 hôm nay │ │
+│ │ ⏱️ Dự kiến: 1h │ │
+│ │ 🛠️ Vai trò: Electrician │ │
+│ │ │ │
+│ │ 💰 Bạn nhận: 120,000 VND (40%) │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ Service: Lắp đặt máy lạnh                │
-│ Step 3/5 của đơn                         │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ [ ❌ Từ chối ]    [ ✅ Nhận lời mời ]   │
-│                                          │
+│ │
+│ Service: Lắp đặt máy lạnh │
+│ Step 3/5 của đơn │
+│ │
+│ ───────────────────────────── │
+│ │
+│ [ ❌ Từ chối ] [ ✅ Nhận lời mời ] │
+│ │
 └─────────────────────────────────────────┘
 ```
 
@@ -280,15 +280,15 @@
 **On reject**: prompt reason picker:
 ```text
 ┌─────────────────────────────────────────┐
-│ Lý do từ chối                            │
+│ Lý do từ chối │
 ├─────────────────────────────────────────┤
-│ ○ Quá xa                                 │
-│ ○ Bận việc khác                          │
-│ ○ Sai chuyên môn                         │
-│ ○ Cá nhân                                │
-│ ○ Khác (ghi rõ)                          │
-│                                          │
-│ [ Hủy ]                  [ Gửi ]        │
+│ ○ Quá xa │
+│ ○ Bận việc khác │
+│ ○ Sai chuyên môn │
+│ ○ Cá nhân │
+│ ○ Khác (ghi rõ) │
+│ │
+│ [ Hủy ] [ Gửi ] │
 └─────────────────────────────────────────┘
 ```
 
@@ -298,35 +298,35 @@
 
 ```text
 ┌─────────────────────────────────────────┐
-│ ←  Thu nhập tháng 6/2026                │
+│ ← Thu nhập tháng 6/2026 │
 ├─────────────────────────────────────────┤
-│                                          │
-│ Tổng: 8,500,000 VND                     │
-│ ─────────────────────────────           │
-│                                          │
-│ 📊 Theo vai trò                         │
-│ ▓▓▓▓▓▓▓▓▓▓▓░░  Lead       6,200,000    │
-│ ▓▓▓░░░░░░░░░░  Helper       1,500,000   │
-│ ▓▓░░░░░░░░░░░  Specialist     800,000   │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ Lịch sử đơn                              │
-│                                          │
+│ │
+│ Tổng: 8,500,000 VND │
+│ ───────────────────────────── │
+│ │
+│ 📊 Theo vai trò │
+│ ▓▓▓▓▓▓▓▓▓▓▓░░ Lead 6,200,000 │
+│ ▓▓▓░░░░░░░░░░ Helper 1,500,000 │
+│ ▓▓░░░░░░░░░░░ Specialist 800,000 │
+│ │
+│ ───────────────────────────── │
+│ │
+│ Lịch sử đơn │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 📅 15/06 · ORD-456                  │ │
-│ │ Lắp đặt máy lạnh                    │ │
-│ │ 5 steps · Lead                       │ │
-│ │ Nhận: 680,000 VND  ›                 │ │ ← tap to expand
+│ │ 📅 15/06 · ORD-456 │ │
+│ │ Lắp đặt máy lạnh │ │
+│ │ 5 steps · Lead │ │
+│ │ Nhận: 680,000 VND › │ │ ← tap to expand
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ 📅 14/06 · ORD-455                  │ │
-│ │ Lắp camera                          │ │
-│ │ 4 steps · Specialist (Electrician)  │ │
-│ │ Nhận: 240,000 VND  ›                 │ │
+│ │ 📅 14/06 · ORD-455 │ │
+│ │ Lắp camera │ │
+│ │ 4 steps · Specialist (Electrician) │ │
+│ │ Nhận: 240,000 VND › │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 └─────────────────────────────────────────┘
 ```
 
@@ -338,66 +338,66 @@
 
 ```text
 ┌─────────────────────────────────────────┐
-│ ←  ORD-456 · Earnings detail            │
+│ ← ORD-456 · Earnings detail │
 ├─────────────────────────────────────────┤
-│                                          │
-│ Lắp đặt máy lạnh                         │
-│ Hoàn thành: 15/06 17:30                 │
-│ Doanh thu đơn: 1,000,000 VND            │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ Tổng bạn nhận: 680,000 VND              │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ Chi tiết theo step                       │
-│                                          │
+│ │
+│ Lắp đặt máy lạnh │
+│ Hoàn thành: 15/06 17:30 │
+│ Doanh thu đơn: 1,000,000 VND │
+│ │
+│ ───────────────────────────── │
+│ │
+│ Tổng bạn nhận: 680,000 VND │
+│ │
+│ ───────────────────────────── │
+│ │
+│ Chi tiết theo step │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ Step 1 · Khảo sát                   │ │
-│ │ Vai trò: Lead · 100%                │ │
-│ │ Step revenue: 80,000 VND            │ │
-│ │ Bạn nhận: 80,000 VND                │ │
+│ │ Step 1 · Khảo sát │ │
+│ │ Vai trò: Lead · 100% │ │
+│ │ Step revenue: 80,000 VND │ │
+│ │ Bạn nhận: 80,000 VND │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ Step 2 · Đục tường + đi ống         │ │
-│ │ Vai trò: Lead · 50%                 │ │
-│ │ Step revenue: 250,000 VND           │ │
-│ │ Bạn nhận: 125,000 VND               │ │
+│ │ Step 2 · Đục tường + đi ống │ │
+│ │ Vai trò: Lead · 50% │ │
+│ │ Step revenue: 250,000 VND │ │
+│ │ Bạn nhận: 125,000 VND │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ Step 3 · Lắp dàn nóng               │ │
-│ │ Vai trò: Lead · 50%                 │ │
-│ │ Step revenue: 250,000 VND           │ │
-│ │ Bạn nhận: 125,000 VND               │ │
+│ │ Step 3 · Lắp dàn nóng │ │
+│ │ Vai trò: Lead · 50% │ │
+│ │ Step revenue: 250,000 VND │ │
+│ │ Bạn nhận: 125,000 VND │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ Step 4 · Lắp dàn lạnh + đấu điện    │ │
-│ │ Vai trò: Lead · 40%                 │ │
-│ │ Step revenue: 270,000 VND           │ │
-│ │ Bạn nhận: 108,000 VND               │ │
-│ │                                      │ │
-│ │ 👥 Team breakdown (lead-only view)  │ │
-│ │ ├ 🌟 Bạn (Lead): 40%               │ │
-│ │ ├ ⚡ Trần B (Electrician): 40%     │ │
-│ │ └ 👤 Lê C (Helper): 20%            │ │
+│ │ Step 4 · Lắp dàn lạnh + đấu điện │ │
+│ │ Vai trò: Lead · 40% │ │
+│ │ Step revenue: 270,000 VND │ │
+│ │ Bạn nhận: 108,000 VND │ │
+│ │ │ │
+│ │ 👥 Team breakdown (lead-only view) │ │
+│ │ ├ 🌟 Bạn (Lead): 40% │ │
+│ │ ├ ⚡ Trần B (Electrician): 40% │ │
+│ │ └ 👤 Lê C (Helper): 20% │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
+│ │
 │ ┌─────────────────────────────────────┐ │
-│ │ Step 5 · Test + nghiệm thu          │ │
-│ │ Vai trò: Lead · 60%                 │ │
-│ │ Step revenue: 150,000 VND           │ │
-│ │ Bạn nhận: 90,000 VND                │ │
+│ │ Step 5 · Test + nghiệm thu │ │
+│ │ Vai trò: Lead · 60% │ │
+│ │ Step revenue: 150,000 VND │ │
+│ │ Bạn nhận: 90,000 VND │ │
 │ └─────────────────────────────────────┘ │
-│                                          │
-│ ─────────────────────────────           │
-│                                          │
-│ Tổng: 80k + 125k + 125k + 108k + 90k    │
-│     = 680,000 VND ✓                     │
-│                                          │
+│ │
+│ ───────────────────────────── │
+│ │
+│ Tổng: 80k + 125k + 125k + 108k + 90k │
+│ = 680,000 VND ✓ │
+│ │
 └─────────────────────────────────────────┘
 ```
 
@@ -413,16 +413,16 @@
 
 ```text
 [Step detail · 1 lead only]
-    ↓ tap "Mời thợ phụ"
+ ↓ tap "Mời thợ phụ"
 [Invite modal: chọn loại + specialty]
-    ↓ tap "Mời" trên thợ
+ ↓ tap "Mời" trên thợ
 [Set split modal]
-    ↓ adjust sliders to 60/40
-    ↓ tap "Gửi lời mời"
+ ↓ adjust sliders to 60/40
+ ↓ tap "Gửi lời mời"
 [Back to Step detail · status "Đang chờ accept"]
-    ⏰ wait...
+ ⏰ wait...
 [Push notification arrives: Helper accepted]
-    ↓ refresh
+ ↓ refresh
 [Step detail · 2 agents · status all OK]
 ```
 
@@ -430,16 +430,16 @@
 
 ```text
 [Push notification on helper phone]
-    ↓ tap notification
+ ↓ tap notification
 [Invitation screen with 30-min timer]
-    ↓ tap "Từ chối"
+ ↓ tap "Từ chối"
 [Reason picker]
-    ↓ select "Quá xa" + tap "Gửi"
+ ↓ select "Quá xa" + tap "Gửi"
 [Back to home screen]
 
 Lead side:
 [Push notification: Helper rejected]
-    ↓ tap notification
+ ↓ tap notification
 [Step detail · status "Trần B từ chối · lý do: Quá xa"]
 [Option: invite another helper OR proceed solo]
 ```
@@ -448,15 +448,15 @@ Lead side:
 
 ```text
 [Step detail · 2 agents accepted, in_progress]
-    ↓ tap settings ⚙️ → "Đổi tỉ lệ chia tiền"
+ ↓ tap settings ⚙️ → "Đổi tỉ lệ chia tiền"
 [Adjust splits modal · 60/40 → 65/35]
-    ↓ validation: SUM still = 100% ✓
-    ↓ tap "Lưu thay đổi"
+ ↓ validation: SUM still = 100% ✓
+ ↓ tap "Lưu thay đổi"
 [Confirmation: "Đã cập nhật. Helper sẽ nhận thông báo"]
 
 Helper side:
 [Push: Lead đã cập nhật tỉ lệ chia tiền của bạn]
-    ↓ tap to view
+ ↓ tap to view
 [Step detail · new split shown: 35% · 105,000 VND]
 ```
 

@@ -1,5 +1,4 @@
 # SMP Environment Matrix · dev / staging / prod
-
 **Audience**: DevOps, Backend, Security
 
 ---
@@ -91,22 +90,22 @@
 
 ```text
 Vault path structure:
-  secret/smp/<env>/<service>/<key>
+ secret/smp/<env>/<service>/<key>
 
 Examples:
-  secret/smp/prod/order-svc/mysql_password
-  secret/smp/prod/order-svc/redis_password
-  secret/smp/prod/integration-svc/inside_api_token
-  secret/smp/prod/api-gateway/jwt_signing_key
+ secret/smp/prod/order-svc/mysql_password
+ secret/smp/prod/order-svc/redis_password
+ secret/smp/prod/integration-svc/inside_api_token
+ secret/smp/prod/api-gateway/jwt_signing_key
 ```
 
 K8s pods access Vault via Vault Agent Injector (sidecar):
 ```yaml
 metadata:
-  annotations:
-    vault.hashicorp.com/agent-inject: "true"
-    vault.hashicorp.com/role: "order-svc"
-    vault.hashicorp.com/agent-inject-secret-mysql: "secret/smp/prod/order-svc"
+ annotations:
+ vault.hashicorp.com/agent-inject: "true"
+ vault.hashicorp.com/role: "order-svc"
+ vault.hashicorp.com/agent-inject-secret-mysql: "secret/smp/prod/order-svc"
 ```
 
 ### 5.3 Local dev secrets
@@ -139,14 +138,14 @@ Most config in env vars. Default trong `internal/config/config.go`, override per
 
 ```go
 type Config struct {
-    Server   ServerConfig
-    MySQL    MySQLConfig
-    Redis    RedisConfig
-    Kafka    KafkaConfig
-    Inside   IntegrationConfig
-    WMS      IntegrationConfig
-    Logging  LoggingConfig
-    Tracing  TracingConfig
+ Server ServerConfig
+ MySQL MySQLConfig
+ Redis RedisConfig
+ Kafka KafkaConfig
+ Inside IntegrationConfig
+ WMS IntegrationConfig
+ Logging LoggingConfig
+ Tracing TracingConfig
 }
 ```
 
@@ -158,10 +157,10 @@ Phase 1 dùng ConfigMap:
 ```yaml
 # k8s/prod/configmap-flags.yaml
 data:
-  ENABLE_PARTNER_PRIVATE_DISPATCH: "true"
-  ENABLE_AUTO_VOUCHER_SUGGEST: "true"
-  ENABLE_MULTI_AGENT_FLOW: "true"
-  MATERIAL_VERIFY_AUTO_APPROVE_THRESHOLD_PCT: "5"
+ ENABLE_PARTNER_PRIVATE_DISPATCH: "true"
+ ENABLE_AUTO_VOUCHER_SUGGEST: "true"
+ ENABLE_MULTI_AGENT_FLOW: "true"
+ MATERIAL_VERIFY_AUTO_APPROVE_THRESHOLD_PCT: "5"
 ```
 
 ### 6.3 Per-env values matrix
@@ -178,26 +177,26 @@ data:
 | RATE_LIMIT_REQ_PER_MIN | 1000 | 200 | 60 |
 | ENABLE_MOCK_PAYMENT | true | false | false |
 
-## 6.5 Rules Engine deployment (v4.0)
+## 6.5 Rules Engine deployment 
 
 > Quy trình deploy `rules_engine.yaml` qua Kubernetes ConfigMap, mount vào pods, hot-reload.
 
 ### Repo separation
 
 ```text
-github.com/trungnguyenchanh/smp-rules-config/   ← repo riêng
+github.com/trungnguyenchanh/smp-rules-config/ ← repo riêng
 ├── environments/
-│   ├── dev/
-│   │   └── rules_engine.yaml
-│   ├── staging/
-│   │   └── rules_engine.yaml
-│   └── prod/
-│       └── rules_engine.yaml
+│ ├── dev/
+│ │ └── rules_engine.yaml
+│ ├── staging/
+│ │ └── rules_engine.yaml
+│ └── prod/
+│ └── rules_engine.yaml
 ├── tests/
-│   └── rules_test.yaml
+│ └── rules_test.yaml
 ├── .github/workflows/
-│   ├── validate.yml     # YAML syntax + expression compile check
-│   └── deploy.yml       # kubectl apply per env
+│ ├── validate.yml # YAML syntax + expression compile check
+│ └── deploy.yml # kubectl apply per env
 └── README.md
 ```
 
@@ -208,16 +207,16 @@ github.com/trungnguyenchanh/smp-rules-config/   ← repo riêng
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: smp-rules-engine
-  namespace: smp-prod
-  labels:
-    app: smp
-    component: rules-engine
-    version: "4.0.0"
+ name: smp-rules-engine
+ namespace: smp-prod
+ labels:
+ app: smp
+ component: rules-engine
+ version: "4.0.0"
 data:
-  rules_engine.yaml: |
-    version: "4.0.0"
-    # ... full content ...
+ rules_engine.yaml: |
+ version: "4.0.0"
+ # ... full content ...
 ```
 
 ### Pod volume mount
@@ -225,17 +224,17 @@ data:
 ```yaml
 # helm chart dispatch-engine/templates/deployment.yaml
 spec:
-  containers:
-    - name: dispatch-engine
-      volumeMounts:
-        - name: rules-config
-          mountPath: /etc/smp/rules
-          readOnly: true
-  volumes:
-    - name: rules-config
-      configMap:
-        name: smp-rules-engine
-        defaultMode: 0444   # read-only
+ containers:
+ - name: dispatch-engine
+ volumeMounts:
+ - name: rules-config
+ mountPath: /etc/smp/rules
+ readOnly: true
+ volumes:
+ - name: rules-config
+ configMap:
+ name: smp-rules-engine
+ defaultMode: 0444 # read-only
 ```
 
 ### Per-env override matrix
@@ -253,31 +252,31 @@ spec:
 
 ```text
 1. BA edit rules_engine.yaml trong smp-rules-config repo
-   ▼
+ ▼
 2. Create PR · CI runs:
-   - YAML syntax validate (yamllint)
-   - All expressions compile check (go run cmd/rule-lint)
-   - Run rules_test.yaml fixtures (assert decisions)
-   ▼
+ - YAML syntax validate (yamllint)
+ - All expressions compile check (go run cmd/rule-lint)
+ - Run rules_test.yaml fixtures (assert decisions)
+ ▼
 3. Reviewer approve (BA Lead + Tech Lead cho prod)
-   ▼
+ ▼
 4. Merge main
-   ▼
+ ▼
 5. GitHub Actions deploy.yml:
-   - kubectl create configmap smp-rules-engine \
-     --from-file=rules_engine.yaml=environments/${ENV}/rules_engine.yaml \
-     --dry-run=client -o yaml | kubectl apply -f -
-   ▼
+ - kubectl create configmap smp-rules-engine \
+ --from-file=rules_engine.yaml=environments/${ENV}/rules_engine.yaml \
+ --dry-run=client -o yaml | kubectl apply -f -
+ ▼
 6. ArgoCD detects ConfigMap change → reconcile
-   ▼
+ ▼
 7. Kubelet syncs ConfigMap to pods (~60s)
-   ▼
+ ▼
 8. Pods detect file change via fsnotify → reload rules
-   ▼
+ ▼
 9. Verify via metrics dashboard:
-   - rules_loaded_total (gauge)
-   - rules_last_reload_timestamp (gauge)
-   - rules_reload_errors_total (counter)
+ - rules_loaded_total (gauge)
+ - rules_last_reload_timestamp (gauge)
+ - rules_reload_errors_total (counter)
 ```
 
 ### Rollback procedure
@@ -285,7 +284,7 @@ spec:
 **Quick rollback** (last good version still in Git):
 ```bash
 cd smp-rules-config
-git revert HEAD            # or git checkout <good-sha> -- environments/prod/
+git revert HEAD # or git checkout <good-sha> -- environments/prod/
 git push origin main
 # CD auto-deploys revert
 ```
@@ -308,17 +307,17 @@ kubectl rollout undo configmap/smp-rules-engine -n smp-prod
 Add Prometheus alerts:
 ```yaml
 - alert: RulesEngineReloadFailed
-  expr: rate(rules_reload_errors_total[5m]) > 0
-  for: 1m
-  annotations:
-    summary: "Rules engine reload failing on {{ $labels.pod }}"
-    runbook: "https://docs.smp.vn/runbooks/rules-engine-reload-failed"
+ expr: rate(rules_reload_errors_total[5m]) > 0
+ for: 1m
+ annotations:
+ summary: "Rules engine reload failing on {{ $labels.pod }}"
+ runbook: "https://docs.smp.vn/runbooks/rules-engine-reload-failed"
 
 - alert: RulesEngineStale
-  expr: time() - rules_last_reload_timestamp > 86400
-  for: 5m
-  annotations:
-    summary: "Rules engine on {{ $labels.pod }} hasn't reloaded in 24h"
+ expr: time - rules_last_reload_timestamp > 86400
+ for: 5m
+ annotations:
+ summary: "Rules engine on {{ $labels.pod }} hasn't reloaded in 24h"
 ```
 
 ## 7. Data seeding
@@ -341,25 +340,25 @@ Master data only. Real customer/order data from launch.
 
 ```text
 Developer push to feature branch
-       ↓
+ ↓
 GitHub Actions CI runs
-       ↓
+ ↓
 Open PR, peer review
-       ↓
+ ↓
 Merge to main
-       ↓
+ ↓
 Auto deploy to dev (within 5 min)
-       ↓
+ ↓
 Manual promote to staging (PM approval)
-       ↓
+ ↓
 QC regression test in staging
-       ↓
+ ↓
 Manual promote to prod (release manager approval)
-       ↓
+ ↓
 Deploy via blue/green to prod
-       ↓
+ ↓
 Smoke test + monitor 30 min
-       ↓
+ ↓
 Stable / rollback
 ```
 
@@ -386,7 +385,7 @@ Detail: xem `CI/CD pipeline doc`.
 ### Bastion access
 ```bash
 # Engineer cần debug prod issue
-ssh bastion.smp.vn       # MFA required
+ssh bastion.smp.vn # MFA required
 sudo -u smp-readonly mysql -h prod-mysql.local
 # Session recorded, auto-terminate after 30 min idle
 ```
@@ -446,28 +445,28 @@ DevOps review monthly, alert if > 110% budget.
 ### 14.1 Cluster topology
 
 ```text
-                       ┌────────────────────────────────┐
-                       │  Global Control Plane          │
-                       │  (Observability + CI/CD only,  │
-                       │   no PII data)                 │
-                       │   Region: us-east-1 (Virginia) │
-                       └────────────────────────────────┘
-                                       │
-        ┌──────────────────────────────┼─────────────────────────────┐
-        │                              │                              │
-        ▼                              ▼                              ▼
-┌───────────────┐             ┌───────────────┐              ┌───────────────┐
-│ smp-asia      │             │ smp-china     │              │ smp-us        │
-│ cluster       │             │ cluster       │              │ cluster       │
-│               │             │               │              │               │
-│ Region: SG    │             │ Region: BJ    │              │ Region: VA    │
-│ ap-southeast-1│             │ cn-beijing    │              │ us-east-1     │
-│               │             │ (AliCloud)    │              │ (AWS)         │
-│               │             │               │              │               │
-│ Countries:    │             │ Countries:    │              │ Countries:    │
-│  VN, TH, SG,  │             │  CN (only)    │              │  US (only)    │
-│  ID, MY, PH   │             │               │              │               │
-└───────────────┘             └───────────────┘              └───────────────┘
+ ┌────────────────────────────────┐
+ │ Global Control Plane │
+ │ (Observability + CI/CD only, │
+ │ no PII data) │
+ │ Region: us-east-1 (Virginia) │
+ └────────────────────────────────┘
+ │
+ ┌──────────────────────────────┼─────────────────────────────┐
+ │ │ │
+ ▼ ▼ ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│ smp-asia │ │ smp-china │ │ smp-us │
+│ cluster │ │ cluster │ │ cluster │
+│ │ │ │ │ │
+│ Region: SG │ │ Region: BJ │ │ Region: VA │
+│ ap-southeast-1│ │ cn-beijing │ │ us-east-1 │
+│ │ │ (AliCloud) │ │ (AWS) │
+│ │ │ │ │ │
+│ Countries: │ │ Countries: │ │ Countries: │
+│ VN, TH, SG, │ │ CN (only) │ │ US (only) │
+│ ID, MY, PH │ │ │ │ │
+└───────────────┘ └───────────────┘ └───────────────┘
 ```
 
 ### 14.2 Cluster sizing per region
@@ -512,29 +511,29 @@ API Gateway at edge (Cloudflare Workers) determines target cluster:
 ```javascript
 // Pseudo-code
 function resolveCluster(request) {
-  // 1. Check JWT (authenticated user)
-  const jwt = getJWT(request);
-  if (jwt?.country_code) {
-    return clusterFor(jwt.country_code);
-  }
-  
-  // 2. Geolocation from Cloudflare CF-IPCountry header
-  const country = request.headers['CF-IPCountry'];
-  if (country) {
-    return clusterFor(country);
-  }
-  
-  // 3. Default to nearest cluster by datacenter
-  return defaultClusterByDC(request.cf.colo);
+ // 1. Check JWT (authenticated user)
+ const jwt = getJWT(request);
+ if (jwt?.country_code) {
+ return clusterFor(jwt.country_code);
+ }
+ 
+ // 2. Geolocation from Cloudflare CF-IPCountry header
+ const country = request.headers['CF-IPCountry'];
+ if (country) {
+ return clusterFor(country);
+ }
+ 
+ // 3. Default to nearest cluster by datacenter
+ return defaultClusterByDC(request.cf.colo);
 }
 
 function clusterFor(country) {
-  const map = {
-    'CN': 'smp-china',
-    'US': 'smp-us',
-    // VN, TH, SG, ID, MY, PH, etc → smp-asia
-  };
-  return map[country] || 'smp-asia';
+ const map = {
+ 'CN': 'smp-china',
+ 'US': 'smp-us',
+ // VN, TH, SG, ID, MY, PH, etc → smp-asia
+ };
+ return map[country] || 'smp-asia';
 }
 ```
 
@@ -557,21 +556,21 @@ Each cluster is **independent** — failure of 1 cluster does NOT affect others.
 
 ```text
 1. Engineer merges PR to main
-   ▼
+ ▼
 2. CI builds Docker image (single image for all regions)
-   ▼
+ ▼
 3. Push image to:
-   - ECR ap-southeast-1 (smp-asia)
-   - ACR cn-beijing (smp-china) - via VPN/proxy
-   - ECR us-east-1 (smp-us)
-   ▼
+ - ECR ap-southeast-1 (smp-asia)
+ - ACR cn-beijing (smp-china) - via VPN/proxy
+ - ECR us-east-1 (smp-us)
+ ▼
 4. ArgoCD deploys to each cluster sequentially:
-   - dev (single region) → smoke test
-   - staging (smp-asia only) → integration test
-   - prod smp-asia → 10% traffic canary (24h soak)
-   - prod smp-asia → 100% rollout
-   - prod smp-us → canary (if applicable)
-   - prod smp-china → canary (manual approval required)
+ - dev (single region) → smoke test
+ - staging (smp-asia only) → integration test
+ - prod smp-asia → 10% traffic canary (24h soak)
+ - prod smp-asia → 100% rollout
+ - prod smp-us → canary (if applicable)
+ - prod smp-china → canary (manual approval required)
 ```
 
 **China deployment is manual**: due to firewall + ICP filing requirements, smp-china deploys are separate process owned by local DevOps in CN team.
@@ -583,11 +582,11 @@ Tag every cloud resource với `region=<cluster-id>` for cost allocation:
 ```yaml
 # Terraform tags
 tags = {
-  Environment   = "prod"
-  Cluster       = "smp-asia"
-  CountryGroup  = "VN-TH-SG-ID-MY-PH"
-  CostCenter    = "engineering"
-  Compliance    = "PDPA"
+ Environment = "prod"
+ Cluster = "smp-asia"
+ CountryGroup = "VN-TH-SG-ID-MY-PH"
+ CostCenter = "engineering"
+ Compliance = "PDPA"
 }
 ```
 

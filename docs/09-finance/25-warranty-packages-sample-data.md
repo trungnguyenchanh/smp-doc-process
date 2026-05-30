@@ -1,7 +1,7 @@
 # Sample Data · 5 Warranty Packages · Maintenance Subscription
 
-> **Status**: DRAFT for review by Finance + Ops + Founder · v3.5+  
-> **Date**: 2026-05-29  
+> **Status**: DRAFT for review by Finance + Ops + Founder · v3.5+ 
+> **Date**: 2026-05-29 
 > **Action required**: Finance review pricing + Ops review quotas + Legal review wording
 
 > ⚠️ **Disclaimer**: Đây là draft proposal. Pricing chốt sau pilot 100 customers. Wording điều khoản chờ luật sư VN sign-off.
@@ -168,31 +168,31 @@ USE smp_catalog;
 INSERT INTO warranty_packages (package_code, name, device_category, duration_months, price, marketing_tag) 
 VALUES ('wpkg_ac_basic_1y', 'Bảo trì máy lạnh cơ bản 1 năm', 'ac', 12, 1200000, 'best_seller');
 
-SET @pkg_id = LAST_INSERT_ID();
+SET @pkg_id = LAST_INSERT_ID;
 
 -- Quotas
 INSERT INTO warranty_package_quotas (package_id, quota_type, service_code, count_total, count_per_period, period_days, auto_suggest, suggest_interval_days) VALUES
-  (@pkg_id, 'cleaning',     'svc_ac_periodic_clean', 4, 1, 90, TRUE, 90),
-  (@pkg_id, 'repair_basic', NULL,                    4, 1, 30, FALSE, NULL);
+ (@pkg_id, 'cleaning', 'svc_ac_periodic_clean', 4, 1, 90, TRUE, 90),
+ (@pkg_id, 'repair_basic', NULL, 4, 1, 30, FALSE, NULL);
 
 -- Covered issues
 INSERT INTO warranty_package_covered_issues (package_id, issue_category, issue_name, max_value) VALUES
-  (@pkg_id, 'capacitor',          'Tụ điện máy lạnh',           300000),
-  (@pkg_id, 'gas_refill_partial', 'Nạp gas bổ sung (< 0.5kg)',  500000),
-  (@pkg_id, 'fan_motor',          'Quạt dàn lạnh/nóng',         400000),
-  (@pkg_id, 'drainage',           'Đường thoát nước',           200000),
-  (@pkg_id, 'thermostat',         'Cảm biến nhiệt',             250000),
-  (@pkg_id, 'remote_control',     'Remote điều khiển',          150000);
+ (@pkg_id, 'capacitor', 'Tụ điện máy lạnh', 300000),
+ (@pkg_id, 'gas_refill_partial', 'Nạp gas bổ sung (< 0.5kg)', 500000),
+ (@pkg_id, 'fan_motor', 'Quạt dàn lạnh/nóng', 400000),
+ (@pkg_id, 'drainage', 'Đường thoát nước', 200000),
+ (@pkg_id, 'thermostat', 'Cảm biến nhiệt', 250000),
+ (@pkg_id, 'remote_control', 'Remote điều khiển', 150000);
 
 -- Package 2: AC Premium
 INSERT INTO warranty_packages (package_code, name, device_category, duration_months, price, marketing_tag) 
 VALUES ('wpkg_ac_premium_1y', 'Bảo trì máy lạnh Premium 1 năm', 'ac', 12, 1800000, 'premium');
-SET @pkg_id = LAST_INSERT_ID();
+SET @pkg_id = LAST_INSERT_ID;
 
 INSERT INTO warranty_package_quotas (package_id, quota_type, service_code, count_total, count_per_period, period_days, auto_suggest, suggest_interval_days) VALUES
-  (@pkg_id, 'cleaning',     'svc_ac_periodic_clean', 4, 1, 90, TRUE, 90),
-  (@pkg_id, 'repair_basic', NULL,                    8, 1, 14, FALSE, NULL),
-  (@pkg_id, 'inspection',   NULL,                    1, 1, 365, TRUE, 180);
+ (@pkg_id, 'cleaning', 'svc_ac_periodic_clean', 4, 1, 90, TRUE, 90),
+ (@pkg_id, 'repair_basic', NULL, 8, 1, 14, FALSE, NULL),
+ (@pkg_id, 'inspection', NULL, 1, 1, 365, TRUE, 180);
 
 -- (covered issues: insert basic 6 + thêm 3 premium issues · skipped for brevity)
 
@@ -200,9 +200,9 @@ INSERT INTO warranty_package_quotas (package_id, quota_type, service_code, count
 
 -- Verification queries
 SELECT 
-  p.package_code, p.name, p.price,
-  (SELECT COUNT(*) FROM warranty_package_quotas q WHERE q.package_id = p.id) AS quota_count,
-  (SELECT COUNT(*) FROM warranty_package_covered_issues ci WHERE ci.package_id = p.id) AS covered_count
+ p.package_code, p.name, p.price,
+ (SELECT COUNT(*) FROM warranty_package_quotas q WHERE q.package_id = p.id) AS quota_count,
+ (SELECT COUNT(*) FROM warranty_package_covered_issues ci WHERE ci.package_id = p.id) AS covered_count
 FROM warranty_packages p;
 -- Expect 5 rows
 ```

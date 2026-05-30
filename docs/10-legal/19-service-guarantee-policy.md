@@ -1,26 +1,5 @@
-<!-- 
-  ────────────────────────────────────────────────────────────────
-  📋 DOC STATUS NOTE
-  
-  Đây là tách từ trust-legal-policy-pack-v1.md (Section A).
-  Tập trung vào chính sách Bảo hành / Đảm bảo dịch vụ.
-  
-  ⚠️ STATUS: DRAFT · bắt buộc legal review (luật sư VN) trước công bố.
-  
-  Related docs:
-    - Doc 20 · COD Payment Policy
-    - Doc 21 · PDPL Data Policy
-    - Doc 15 · Business Rules (BR-WARRANTY rules sẽ chốt khi adopt)
-    - Doc 16 · Finance Ledger (service_guarantee_reserve account)
-  
-  Author: SMP Tech Lead/CTO · Date: 2026-05-28
-  Status: DRAFT v1.0
-  ────────────────────────────────────────────────────────────────
--->
-
-# Doc 19 · Service Guarantee Policy · v1.0 (DRAFT)
-
-**Version**: 1.0 · **Date**: 2026-05-28 · **Status**: DRAFT — **bắt buộc legal review (luật sư VN) trước khi công bố/áp dụng** · **Audience**: Legal, Ops, BA, Founder
+# Doc 19 · Service Guarantee Policy · DRAFT
+**Status**: DRAFT — **bắt buộc legal review (luật sư VN) trước khi công bố/áp dụng** · **Audience**: Legal, Ops, BA, Founder
 
 > ⚠️ **Disclaimer**: Đây là bản thảo do team soạn để định hình chính sách, **không phải tư vấn pháp lý**. Mọi điều khoản công bố cho KH/thợ/partner phải qua luật sư VN rà soát. Các viện dẫn luật trong doc này cần luật sư xác nhận áp dụng đúng tình huống SMP.
 
@@ -133,7 +112,7 @@ Recommended pricing (DRAFT):
 |---|---|---|---|---:|
 | AC Basic | 12 tháng | 4 lần | 4 lần whitelist | 1,200,000 |
 | AC Premium | 12 tháng | 4 lần | 8 lần whitelist | 1,800,000 |
-| AC Family (3 devices) | 12 tháng | 4 × 3 | 4 × 3 | 3,200,000 (v3.7+) |
+| AC Family (3 devices) | 12 tháng | 4 × 3 | 4 × 3 | 3,200,000  |
 | Washer Basic | 12 tháng | 2 lần | 3 lần | 800,000 |
 | Fridge Basic | 12 tháng | - | 4 lần | 900,000 |
 
@@ -161,5 +140,5 @@ Recommended pricing (DRAFT):
 ## Changelog
 | Version | Date | Changes |
 |---|---|---|
-| 2.0 | 2026-05-29 | Add Section 9 · Maintenance Subscription Package (v3.5+) · 5 packages draft pricing |
+| 2.0 | 2026-05-29 | Add Section 9 · Maintenance Subscription Package  · 5 packages draft pricing |
 | 1.0 | 2026-05-28 | Tách từ trust-legal-policy-pack-v1.md (Section A). Service guarantee, không phải insurance. Quỹ reserve trích từ commission. |

@@ -1,5 +1,5 @@
 site_name: SMP Documentation
-site_description: Service Marketplace Platform · Process Documentation v3.4
+site_description: Service Marketplace Platform · Process Documentation
 site_author: SMP Engineering Team
 site_url: https://docs.smp.vn
 
@@ -104,7 +104,6 @@ nav:
   - Tổng quan:
       - Home: index.md
       - System Overview: 00-system-functional-overview.md
-      - Migration Plan v4.0: MIGRATION-PLAN-v4.md
       - Contributing: CONTRIBUTING.md
       - Deploy Guide: DEPLOY-GUIDE.md
   - 🏛️ Architecture:
@@ -129,7 +128,7 @@ nav:
       - Auth Spec: 08-security/08-auth-spec.md
       - Audit Log: 08-security/12-audit-log-spec.md
       - Data Classification: 08-security/13-data-classification-encryption.md
-  - 💰 Finance (v3.5+ spec):
+  - 💰 Finance:
       - Finance Ledger Spec: 09-finance/16-finance-ledger-spec.md
       - Payment & Settlement Lifecycle: 09-finance/17-payment-settlement-lifecycle.md
       - Event Catalog: 09-finance/18-event-catalog.md

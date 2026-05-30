@@ -1,5 +1,4 @@
 # SMP Runbook · Top 5 Incidents
-
 **Audience**: DevOps, SRE, On-call engineers · **Format**: Cookbook · **Updated**: v3.3
 
 ---
@@ -129,14 +128,14 @@ curl -X POST https://api.smp.vn/integrations/inside/payment-webhook -d '{"test":
 ```bash
 # Get list events trong DLQ
 mongosh "$MONGO_URI" --eval '
-  db.event_log.find({status: "dlq", event_type: "inside.payment.succeeded"})
-    .limit(100).forEach(e => print(e.event_id))
+ db.event_log.find({status: "dlq", event_type: "inside.payment.succeeded"})
+ .limit(100).forEach(e => print(e.event_id))
 '
 
 # Replay endpoint (admin only)
 for eid in $(...); do
-  curl -X POST https://api.smp.vn/admin/events/$eid/replay \
-    -H "Authorization: Bearer $ADMIN_TOKEN"
+ curl -X POST https://api.smp.vn/admin/events/$eid/replay \
+ -H "Authorization: Bearer $ADMIN_TOKEN"
 done
 ```
 
@@ -321,7 +320,7 @@ kubectl exec -it integration-svc-xxx -- curl http://wms.local/health
 **Option A · Manual half-open (test recovery):**
 ```bash
 curl -X POST http://integration-svc:8080/admin/circuit-breaker/half-open \
-  -d '{"service":"inside"}'
+ -d '{"service":"inside"}'
 ```
 
 **Option B · Bypass circuit (emergency):**
@@ -345,7 +344,7 @@ curl -X POST http://integration-svc:8080/admin/circuit-breaker/half-open \
 
 ---
 
-## INC-006 · Kafka broker down (v4.0)
+## INC-006 · Kafka broker down 
 
 **Trigger**: Prometheus alert `kafka_broker_down{cluster="prod"} > 0` hoặc producer/consumer error rate spike
 
@@ -367,7 +366,7 @@ kubectl exec -n smp-prod kafka-0 -- kafka-broker-api-versions.sh --bootstrap-ser
 
 # Check under-replicated partitions
 kubectl exec -n smp-prod kafka-0 -- kafka-topics.sh --describe \
-  --bootstrap-server localhost:9092 --under-replicated-partitions
+ --bootstrap-server localhost:9092 --under-replicated-partitions
 ```
 
 ### Mitigation
@@ -390,10 +389,10 @@ kubectl scale statefulset/kafka --replicas=4 -n smp-prod
 - Producers buffer events trong memory (sẽ overflow sau ~30s)
 - Consumers stall
 - **Action**:
-  1. Page on-call Tech Lead + CTO
-  2. Activate fallback: services switch to **direct HTTP** mode (degraded mode, no eventual consistency)
-  3. Restore Kafka cluster (xem DR runbook)
-  4. Drain buffered events after recovery
+ 1. Page on-call Tech Lead + CTO
+ 2. Activate fallback: services switch to **direct HTTP** mode (degraded mode, no eventual consistency)
+ 3. Restore Kafka cluster (xem DR runbook)
+ 4. Drain buffered events after recovery
 
 ### Prevention
 - Multi-AZ deployment (brokers spread across 3 zones)
@@ -407,7 +406,7 @@ kubectl scale statefulset/kafka --replicas=4 -n smp-prod
 
 ---
 
-## INC-007 · Consumer lag spike (v4.0)
+## INC-007 · Consumer lag spike 
 
 **Trigger**: `kafka_consumergroup_lag{group="dispatch-engine"} > 10000`
 
@@ -420,12 +419,12 @@ kubectl scale statefulset/kafka --replicas=4 -n smp-prod
 ```bash
 # Check current lag per consumer group
 kubectl exec kafka-0 -- kafka-consumer-groups.sh \
-  --bootstrap-server localhost:9092 --describe --group dispatch-engine
+ --bootstrap-server localhost:9092 --describe --group dispatch-engine
 
 # Output:
-# TOPIC          PARTITION  CURRENT-OFFSET  LOG-END-OFFSET  LAG     CONSUMER-ID
-# orders.events  0          15234           28500           13266   dispatch-engine-0
-# orders.events  1          22100           28450           6350    dispatch-engine-1
+# TOPIC PARTITION CURRENT-OFFSET LOG-END-OFFSET LAG CONSUMER-ID
+# orders.events 0 15234 28500 13266 dispatch-engine-0
+# orders.events 1 22100 28450 6350 dispatch-engine-1
 # ...
 ```
 
@@ -443,8 +442,8 @@ kubectl logs -n smp-prod -l app=dispatch-engine --tail=100 | grep ERROR
 - Check if 1 partition has >>> messages than others
 - Cause: bad partition key (vd cùng customer_id high-volume)
 - Mitigation:
-  - Short-term: scale up consumers
-  - Long-term: review key strategy (xem doc 01 section 7.6.3)
+ - Short-term: scale up consumers
+ - Long-term: review key strategy (xem doc 01 section 7.6.3)
 
 **Scenario 3: Traffic spike**
 - Scale up consumers:
@@ -457,13 +456,13 @@ kubectl scale deployment dispatch-engine --replicas=6 -n smp-prod
 - Check DLQ:
 ```bash
 kafka-console-consumer.sh --bootstrap-server localhost:9092 \
-  --topic orders.events.dlq --from-beginning --max-messages 10
+ --topic orders.events.dlq --from-beginning --max-messages 10
 ```
 - Manually skip/fix the bad offset:
 ```bash
 kafka-consumer-groups.sh --bootstrap-server localhost:9092 \
-  --group dispatch-engine --reset-offsets --to-offset <next_good_offset> \
-  --topic orders.events:0 --execute
+ --group dispatch-engine --reset-offsets --to-offset <next_good_offset> \
+ --topic orders.events:0 --execute
 ```
 
 ### Prevention
@@ -477,7 +476,7 @@ kafka-consumer-groups.sh --bootstrap-server localhost:9092 \
 
 ---
 
-## INC-008 · Debezium connector crashed (v4.0)
+## INC-008 · Debezium connector crashed 
 
 **Trigger**: `kafka_connect_connector_status{connector="smp-mysql-connector",state!="RUNNING"} > 0`
 
@@ -525,7 +524,7 @@ curl -X PUT http://kafka-connect:8083/connectors/smp-mysql-connector/pause
 # Delete offset (force re-snapshot)
 # WARNING: this creates duplicate events in Kafka. Consumers must be idempotent.
 kafka-delete-records.sh --bootstrap-server localhost:9092 \
-  --offset-json-file offsets.json
+ --offset-json-file offsets.json
 
 # Resume
 curl -X PUT http://kafka-connect:8083/connectors/smp-mysql-connector/resume
@@ -547,7 +546,7 @@ curl -X PUT http://kafka-connect:8083/connectors/smp-mysql-connector/resume
 
 ---
 
-## INC-009 · Elasticsearch read model drift (v4.0)
+## INC-009 · Elasticsearch read model drift 
 
 **Trigger**: Dashboard shows lag > 60 seconds OR `es_sink_lag_seconds > 300`
 
@@ -563,7 +562,7 @@ curl -s http://kafka-connect:8083/connectors/elasticsearch-sink/status
 
 # Check Kafka consumer lag for ES sink group
 kubectl exec kafka-0 -- kafka-consumer-groups.sh \
-  --bootstrap-server localhost:9092 --describe --group connect-elasticsearch-sink
+ --bootstrap-server localhost:9092 --describe --group connect-elasticsearch-sink
 
 # Check ES cluster health
 curl -s http://elasticsearch:9200/_cluster/health | jq
@@ -595,10 +594,10 @@ curl -X POST http://kafka-connect:8083/connectors/elasticsearch-sink/restart
 
 **Scenario 4: Catastrophic divergence** (data clearly wrong)
 - Full re-sync:
-  1. Pause sink connector
-  2. Delete ES indices
-  3. Recreate from Kafka (Debezium will re-emit all events from binlog start)
-  4. Resume sink
+ 1. Pause sink connector
+ 2. Delete ES indices
+ 3. Recreate from Kafka (Debezium will re-emit all events from binlog start)
+ 4. Resume sink
 
 ### Prevention
 - Daily reconciliation job: count rows in MySQL vs documents in ES, alert if drift > 0.1%
@@ -611,7 +610,7 @@ curl -X POST http://kafka-connect:8083/connectors/elasticsearch-sink/restart
 
 ---
 
-## INC-010 · Wallet reconciliation mismatch (v4.0)
+## INC-010 · Wallet reconciliation mismatch 
 
 **Trigger**: Daily reconciliation job alert · `wallet_recon_diff_pct > 0.01%` OR absolute diff > 100k VND
 
@@ -641,7 +640,7 @@ Common causes:
 - If still off: replay webhooks from gateway:
 ```bash
 kubectl exec finance-svc-0 -- /app/bin/replay-webhooks \
-  --gateway=vnpay --from=$(date -d 'yesterday 00:00') --to=$(date -d 'today 00:00')
+ --gateway=vnpay --from=$(date -d 'yesterday 00:00') --to=$(date -d 'today 00:00')
 ```
 
 **Scenario 2: Manual adjustment** (no gateway txn)
@@ -655,7 +654,7 @@ kubectl exec finance-svc-0 -- /app/bin/replay-webhooks \
 ```sql
 SELECT from_currency, to_currency, rate, rate_date
 FROM currency_rates
-WHERE rate_date >= CURDATE() - INTERVAL 2 DAY
+WHERE rate_date >= CURDATE - INTERVAL 2 DAY
 ORDER BY rate_date DESC LIMIT 20;
 ```
 - If stale > 1 day: manually trigger rate refresh + recompute conversions
@@ -679,17 +678,17 @@ ORDER BY rate_date DESC LIMIT 20;
 
 ---
 
-## INC-011 · Fraud detection triggered (v4.0)
+## INC-011 · Fraud detection triggered 
 
 **Trigger**: `fraud_detection_signals_total{severity="high"} > 0` OR pattern alerts from Kafka stream
 
 ### Detection
 - Stream processing job consumes `payments.events` + `partners.events` realtime
 - Flags suspicious patterns matching fraud rules:
-  - Multiple high-value topups from same IP across multiple partners
-  - Velocity: > 5 topups within 10 min from same partner
-  - Geography: topup IP country differs from partner registered country
-  - Amount: topup > 10x partner average + first time
+ - Multiple high-value topups from same IP across multiple partners
+ - Velocity: > 5 topups within 10 min from same partner
+ - Geography: topup IP country differs from partner registered country
+ - Amount: topup > 10x partner average + first time
 - Alerts go to `#security-alerts` Slack + page on-call
 
 ### Triage (5 phút) — TIME CRITICAL
@@ -697,7 +696,7 @@ ORDER BY rate_date DESC LIMIT 20;
 ```bash
 # Pull recent suspicious txns
 curl -s -H "Authorization: Bearer $JWT" \
-  http://finance-svc:8080/internal/fraud-alerts/recent?hours=1 | jq
+ http://finance-svc:8080/internal/fraud-alerts/recent?hours=1 | jq
 
 # Output: list of flagged partner_id, txn_ids, signals matched
 ```
@@ -709,14 +708,14 @@ curl -s -H "Authorization: Bearer $JWT" \
 ```bash
 # Immediate: freeze partner wallet (block further txns)
 kubectl exec partner-svc-0 -- /app/bin/admin freeze \
-  --partner=P00X --reason="fraud_alert_INC-011-2026-05-28"
+ --partner=P00X --reason="fraud_alert_INC-011-2026-05-28"
 ```
 
 - Notify partner via email + phone call (security team owns this comms)
 - Coordinate with payment gateway to reverse pending settlements
 - File report với:
-  - Internal compliance (within 24h)
-  - State Bank Vietnam (SBV) if > 300M VND single txn (luật phòng chống rửa tiền)
+ - Internal compliance (within 24h)
+ - State Bank Vietnam (SBV) if > 300M VND single txn (luật phòng chống rửa tiền)
 - Preserve evidence: export logs, IP records, device fingerprints
 
 **Scenario 2: False positive** (legitimate, just unusual)
@@ -819,10 +818,10 @@ kubectl --context=smp-asia scale deployment/mirrormaker-to-cn --replicas=3
 ### 3. War room (SEV-1, SEV-2)
 - Slack channel `#incident-YYYY-MM-DD-<short>`
 - Roles:
-  - **Incident Commander** — coordinate, decide
-  - **Communications Lead** — Slack + status page + customer comms
-  - **Tech Lead** — debug + fix
-  - **Scribe** — timeline log
+ - **Incident Commander** — coordinate, decide
+ - **Communications Lead** — Slack + status page + customer comms
+ - **Tech Lead** — debug + fix
+ - **Scribe** — timeline log
 
 ### 4. Mitigate first, fix later
 - Stop bleeding → users not affected

@@ -1,6 +1,6 @@
 # SMP API Contract · OpenAPI 3.0
 
-**Version**: v1 · **Base URL**: `https://api.smp.vn/api/v1` · **Audience**: Backend, Frontend, Integration
+ **Base URL**: `https://api.smp.vn/api/v1` · **Audience**: Backend, Frontend, Integration
 
 ---
 
@@ -16,12 +16,12 @@
 
 ```json
 {
-  "type": "/errors/insufficient-balance",
-  "title": "Insufficient wallet balance",
-  "status": 422,
-  "detail": "Partner wallet balance is 100,000 VND, required 750,000 VND",
-  "instance": "/api/v1/orders",
-  "request_id": "req_01HX7K2M"
+ "type": "/errors/insufficient-balance",
+ "title": "Insufficient wallet balance",
+ "status": 422,
+ "detail": "Partner wallet balance is 100,000 VND, required 750,000 VND",
+ "instance": "/api/v1/orders",
+ "request_id": "req_01HX7K2M"
 }
 ```
 
@@ -60,14 +60,14 @@ Request:
 Response 200:
 ```json
 {
-  "access_token": "eyJhbGciOiJSUzI1NiI...",
-  "refresh_token": "eyJ...",
-  "expires_in": 28800,
-  "user": {
-    "user_id": "usr_01HX",
-    "role": "customer",
-    "name": "Nguyễn Văn A"
-  }
+ "access_token": "eyJhbGciOiJSUzI1NiI...",
+ "refresh_token": "eyJ...",
+ "expires_in": 28800,
+ "user": {
+ "user_id": "usr_01HX",
+ "role": "customer",
+ "name": "Nguyễn Văn A"
+ }
 }
 ```
 
@@ -85,38 +85,38 @@ Tạo đơn mới. Required scope: `orders.create`.
 Request:
 ```json
 {
-  "service_id": "svc_ac_repair",
-  "address": {
-    "line": "15 Lê Lợi",
-    "ward": "Bến Nghé",
-    "district": "Q.1",
-    "city": "HCMC",
-    "lat": 10.7769,
-    "lng": 106.7009
-  },
-  "scheduled_at": "2026-05-27T14:00:00+07:00",
-  "notes": "Máy không lạnh, dàn lạnh chảy nước",
-  "voucher_code": "HOTSUMMER20",
-  
-  // For partner-created orders
-  "source": "partner_customer",
-  "partner_id": "ptn_hung_acservice",
-  "partner_order_ref": "VIN-2026-04821",
-  "dispatch_visibility": "private",
-  "end_customer_id": "cus_01HX5K"
+ "service_id": "svc_ac_repair",
+ "address": {
+ "line": "15 Lê Lợi",
+ "ward": "Bến Nghé",
+ "district": "Q.1",
+ "city": "HCMC",
+ "lat": 10.7769,
+ "lng": 106.7009
+ },
+ "scheduled_at": "2026-05-27T14:00:00+07:00",
+ "notes": "Máy không lạnh, dàn lạnh chảy nước",
+ "voucher_code": "HOTSUMMER20",
+ 
+ // For partner-created orders
+ "source": "partner_customer",
+ "partner_id": "ptn_hung_acservice",
+ "partner_order_ref": "VIN-2026-04821",
+ "dispatch_visibility": "private",
+ "end_customer_id": "cus_01HX5K"
 }
 ```
 
 Response 201:
 ```json
 {
-  "order": {
-    "order_id": "ord_01HX7K2M",
-    "current_stage": "01_created",
-    "total_estimate": 750000,
-    "scheduled_at": "2026-05-27T14:00:00+07:00",
-    ...
-  }
+ "order": {
+ "order_id": "ord_01HX7K2M",
+ "current_stage": "01_created",
+ "total_estimate": 750000,
+ "scheduled_at": "2026-05-27T14:00:00+07:00",
+ ...
+ }
 }
 ```
 
@@ -133,9 +133,9 @@ Query: `?customer_id=cus_X | partner_id=ptn_X | agent_id=agt_X | status=in_progr
 Response 200:
 ```json
 {
-  "items": [ { "order_id": "...", ... }, ... ],
-  "next_cursor": "eyJjcmVhdGVk...",
-  "has_more": true
+ "items": [ { "order_id": "...", ... }, ... ],
+ "next_cursor": "eyJjcmVhdGVk...",
+ "has_more": true
 }
 ```
 
@@ -150,7 +150,7 @@ Transit stage. Vd: `POST /orders/ord_X/transitions/05_surveyed`
 
 Auth check: agent gắn vào order mới được transit.
 
-### Multi-agent step endpoints (v3.5+)
+### Multi-agent step endpoints 
 
 > Endpoints cho cơ chế nhiều thợ tham gia 1 step với role + split ratio. Schema [Doc 02 §7.7](../02-database/02-database-schema.md), rules [Doc 15 Section Q](../05-ba/15-business-rules.md).
 
@@ -160,22 +160,22 @@ List all steps in order with current agents + splits.
 Response:
 ```jsonc
 {
-  "data": [
-    {
-      "order_step_id": "ostep_123",
-      "step_no": 3,
-      "step_name": "Lắp đặt",
-      "step_weight_bps": 3000,
-      "step_revenue_minor": 300000,
-      "status": "in_progress",
-      "lead_agent_id": "agent_A",
-      "agents": [
-        {"agent_id": "agent_A", "role": "lead", "split_bps": 4000, "is_override": true, "status": "in_progress"},
-        {"agent_id": "agent_C", "role": "specialist", "specialty": "electrician", "split_bps": 4000, "is_override": false, "status": "accepted"},
-        {"agent_id": "agent_D", "role": "helper", "split_bps": 2000, "is_override": true, "status": "assigned"}
-      ]
-    }
-  ]
+ "data": [
+ {
+ "order_step_id": "ostep_123",
+ "step_no": 3,
+ "step_name": "Lắp đặt",
+ "step_weight_bps": 3000,
+ "step_revenue_minor": 300000,
+ "status": "in_progress",
+ "lead_agent_id": "agent_A",
+ "agents": [
+ {"agent_id": "agent_A", "role": "lead", "split_bps": 4000, "is_override": true, "status": "in_progress"},
+ {"agent_id": "agent_C", "role": "specialist", "specialty": "electrician", "split_bps": 4000, "is_override": false, "status": "accepted"},
+ {"agent_id": "agent_D", "role": "helper", "split_bps": 2000, "is_override": true, "status": "assigned"}
+ ]
+ }
+ ]
 }
 ```
 
@@ -187,10 +187,10 @@ Auth: caller MUST be lead of this step (BR-MA-004).
 Body:
 ```jsonc
 {
-  "agent_id": "agent_D",
-  "role": "helper",                  // helper | specialist
-  "specialty": null,                  // optional · for specialist
-  "split_bps": 2000                   // proposed split
+ "agent_id": "agent_D",
+ "role": "helper", // helper | specialist
+ "specialty": null, // optional · for specialist
+ "split_bps": 2000 // proposed split
 }
 ```
 
@@ -202,13 +202,13 @@ Validation:
 Body với adjustment (rebalance other splits):
 ```jsonc
 {
-  "agent_id": "agent_D",
-  "role": "helper",
-  "split_bps": 2000,
-  "splits_adjustment": [
-    {"agent_id": "agent_A", "new_split_bps": 4000},   // lead reduces from 5000
-    {"agent_id": "agent_C", "new_split_bps": 4000}    // specialist reduces from 5000
-  ]
+ "agent_id": "agent_D",
+ "role": "helper",
+ "split_bps": 2000,
+ "splits_adjustment": [
+ {"agent_id": "agent_A", "new_split_bps": 4000}, // lead reduces from 5000
+ {"agent_id": "agent_C", "new_split_bps": 4000} // specialist reduces from 5000
+ ]
 }
 ```
 
@@ -227,10 +227,10 @@ Constraints:
 Body:
 ```jsonc
 {
-  "splits_adjustment": [
-    {"agent_id": "agent_A", "new_split_bps": 6000},   // lead absorbs back
-    {"agent_id": "agent_C", "new_split_bps": 4000}
-  ]
+ "splits_adjustment": [
+ {"agent_id": "agent_A", "new_split_bps": 6000}, // lead absorbs back
+ {"agent_id": "agent_C", "new_split_bps": 4000}
+ ]
 }
 ```
 
@@ -242,12 +242,12 @@ Auth: caller MUST be lead.
 Body:
 ```jsonc
 {
-  "splits": [
-    {"agent_id": "agent_A", "new_split_bps": 5000},
-    {"agent_id": "agent_C", "new_split_bps": 3000},
-    {"agent_id": "agent_D", "new_split_bps": 2000}
-  ],
-  "reason": "specialist's work was simpler than expected"
+ "splits": [
+ {"agent_id": "agent_A", "new_split_bps": 5000},
+ {"agent_id": "agent_C", "new_split_bps": 3000},
+ {"agent_id": "agent_D", "new_split_bps": 2000}
+ ],
+ "reason": "specialist's work was simpler than expected"
 }
 ```
 
@@ -276,27 +276,27 @@ Agent's earnings breakdown per step (NEW v3.5+ shape).
 Response:
 ```jsonc
 {
-  "data": [
-    {
-      "order_id": "order_456",
-      "order_step_id": "ostep_123",
-      "step_no": 3,
-      "role": "lead",
-      "split_bps": 4000,
-      "step_revenue_minor": 300000,
-      "amount_earned_minor": 120000,
-      "currency": "VND",
-      "step_completed_at": "2026-06-15T10:00:00Z"
-    }
-  ],
-  "summary": {
-    "total_earned_minor": 850000,
-    "by_role": {"lead": 600000, "helper": 150000, "specialist": 100000}
-  }
+ "data": [
+ {
+ "order_id": "order_456",
+ "order_step_id": "ostep_123",
+ "step_no": 3,
+ "role": "lead",
+ "split_bps": 4000,
+ "step_revenue_minor": 300000,
+ "amount_earned_minor": 120000,
+ "currency": "VND",
+ "step_completed_at": "2026-06-15T10:00:00Z"
+ }
+ ],
+ "summary": {
+ "total_earned_minor": 850000,
+ "by_role": {"lead": 600000, "helper": 150000, "specialist": 100000}
+ }
 }
 ```
 
-### Warranty package endpoints (v3.5+)
+### Warranty package endpoints 
 
 > Endpoints cho maintenance subscription packages. Schema [Doc 02 §7.8](../02-database/02-database-schema.md), rules [Doc 15 Section R](../05-ba/15-business-rules.md).
 
@@ -308,25 +308,25 @@ Query: `?device_category=ac&duration_months=12`
 Response:
 ```jsonc
 {
-  "data": [
-    {
-      "package_code": "wpkg_ac_basic_1y",
-      "name": "Bảo trì máy lạnh cơ bản 1 năm",
-      "device_category": "ac",
-      "duration_months": 12,
-      "price_minor": 1200000,
-      "currency": "VND",
-      "marketing_tag": "best_seller",
-      "quotas": [
-        {"type": "cleaning", "count_total": 4, "service_code": "svc_ac_periodic_clean"},
-        {"type": "repair_basic", "count_total": 4}
-      ],
-      "covered_issues": [
-        {"category": "capacitor", "name": "Tụ điện máy lạnh", "max_value_minor": 300000},
-        {"category": "gas_refill_partial", "name": "Nạp gas bổ sung", "max_value_minor": 500000}
-      ]
-    }
-  ]
+ "data": [
+ {
+ "package_code": "wpkg_ac_basic_1y",
+ "name": "Bảo trì máy lạnh cơ bản 1 năm",
+ "device_category": "ac",
+ "duration_months": 12,
+ "price_minor": 1200000,
+ "currency": "VND",
+ "marketing_tag": "best_seller",
+ "quotas": [
+ {"type": "cleaning", "count_total": 4, "service_code": "svc_ac_periodic_clean"},
+ {"type": "repair_basic", "count_total": 4}
+ ],
+ "covered_issues": [
+ {"category": "capacitor", "name": "Tụ điện máy lạnh", "max_value_minor": 300000},
+ {"category": "gas_refill_partial", "name": "Nạp gas bổ sung", "max_value_minor": 500000}
+ ]
+ }
+ ]
 }
 ```
 
@@ -336,10 +336,10 @@ List customer's registered devices.
 Response:
 ```jsonc
 {
-  "data": [
-    {"id": "dev_101", "device_category": "ac", "brand": "Daikin", "model": "FTKZ25", "install_location": "Phòng khách"},
-    {"id": "dev_102", "device_category": "ac", "brand": "Panasonic", "install_location": "Phòng ngủ chính"}
-  ]
+ "data": [
+ {"id": "dev_101", "device_category": "ac", "brand": "Daikin", "model": "FTKZ25", "install_location": "Phòng khách"},
+ {"id": "dev_102", "device_category": "ac", "brand": "Panasonic", "install_location": "Phòng ngủ chính"}
+ ]
 }
 ```
 
@@ -349,27 +349,27 @@ Add a new device to customer profile.
 Body:
 ```jsonc
 {
-  "device_category": "ac",
-  "brand": "Daikin",
-  "model": "FTKZ25NVMV",
-  "serial_no": "DKZ-2024-12345",
-  "install_date": "2024-03-15",
-  "install_location": "Phòng khách tầng 1"
+ "device_category": "ac",
+ "brand": "Daikin",
+ "model": "FTKZ25NVMV",
+ "serial_no": "DKZ-2024-12345",
+ "install_date": "2024-03-15",
+ "install_location": "Phòng khách tầng 1"
 }
 ```
 
 #### POST /customers/me/warranty-packages/purchase
 Purchase a warranty package for a device.
 
-Auth: customer  
+Auth: customer 
 Body:
 ```jsonc
 {
-  "package_code": "wpkg_ac_basic_1y",
-  "device_id": "dev_101",
-  "payment_method": "gateway",   // gateway | wallet
-  "agreed_to_terms": true,
-  "idempotency_key": "purchase_xyz_123"
+ "package_code": "wpkg_ac_basic_1y",
+ "device_id": "dev_101",
+ "payment_method": "gateway", // gateway | wallet
+ "agreed_to_terms": true,
+ "idempotency_key": "purchase_xyz_123"
 }
 ```
 
@@ -381,16 +381,16 @@ Validation:
 Response 201:
 ```jsonc
 {
-  "customer_warranty_id": "cw_456",
-  "purchase_order_id": "ord_789",
-  "start_date": "2026-06-15",
-  "end_date": "2027-06-15",
-  "amount_minor": 1200000,
-  "payment_status": "pending",   // wait for gateway confirmation
-  "quotas": [
-    {"type": "cleaning", "remaining": 4, "total": 4},
-    {"type": "repair_basic", "remaining": 4, "total": 4}
-  ]
+ "customer_warranty_id": "cw_456",
+ "purchase_order_id": "ord_789",
+ "start_date": "2026-06-15",
+ "end_date": "2027-06-15",
+ "amount_minor": 1200000,
+ "payment_status": "pending", // wait for gateway confirmation
+ "quotas": [
+ {"type": "cleaning", "remaining": 4, "total": 4},
+ {"type": "repair_basic", "remaining": 4, "total": 4}
+ ]
 }
 ```
 
@@ -400,48 +400,48 @@ List customer's active warranties.
 Response:
 ```jsonc
 {
-  "data": [
-    {
-      "id": "cw_456",
-      "package_name": "Bảo trì máy lạnh cơ bản 1 năm",
-      "device": {"id": "dev_101", "category": "ac", "brand": "Daikin", "location": "Phòng khách"},
-      "status": "active",
-      "start_date": "2026-06-15",
-      "end_date": "2027-06-15",
-      "days_remaining": 280,
-      "quotas": [
-        {"type": "cleaning", "remaining": 3, "total": 4, "next_eligible_at": "2026-09-15"},
-        {"type": "repair_basic", "remaining": 4, "total": 4}
-      ]
-    }
-  ]
+ "data": [
+ {
+ "id": "cw_456",
+ "package_name": "Bảo trì máy lạnh cơ bản 1 năm",
+ "device": {"id": "dev_101", "category": "ac", "brand": "Daikin", "location": "Phòng khách"},
+ "status": "active",
+ "start_date": "2026-06-15",
+ "end_date": "2027-06-15",
+ "days_remaining": 280,
+ "quotas": [
+ {"type": "cleaning", "remaining": 3, "total": 4, "next_eligible_at": "2026-09-15"},
+ {"type": "repair_basic", "remaining": 4, "total": 4}
+ ]
+ }
+ ]
 }
 ```
 
 #### POST /customers/me/warranties/{warranty_id}/claims
 Open a claim against active warranty.
 
-Auth: customer  
+Auth: customer 
 Body cho cleaning claim:
 ```jsonc
 {
-  "claim_type": "cleaning",
-  "service_code": "svc_ac_periodic_clean",
-  "scheduled_date": "2026-07-15",
-  "scheduled_time_window": "morning",
-  "notes": "Vệ sinh định kỳ lần 2"
+ "claim_type": "cleaning",
+ "service_code": "svc_ac_periodic_clean",
+ "scheduled_date": "2026-07-15",
+ "scheduled_time_window": "morning",
+ "notes": "Vệ sinh định kỳ lần 2"
 }
 ```
 
 Body cho repair claim:
 ```jsonc
 {
-  "claim_type": "repair_basic",
-  "issue_category": "capacitor",
-  "issue_description": "Máy lạnh không khởi động, nghi tụ điện hỏng",
-  "photos": ["url_1", "url_2"],
-  "preferred_visit_date": "2026-07-15",
-  "preferred_time_window": "afternoon"
+ "claim_type": "repair_basic",
+ "issue_category": "capacitor",
+ "issue_description": "Máy lạnh không khởi động, nghi tụ điện hỏng",
+ "photos": ["url_1", "url_2"],
+ "preferred_visit_date": "2026-07-15",
+ "preferred_time_window": "afternoon"
 }
 ```
 
@@ -454,10 +454,10 @@ Validation per BR-WPKG-004:
 Response 201:
 ```jsonc
 {
-  "claim_id": "wc_789",
-  "status": "pending",          // cleaning auto-approve; repair needs Ops approval
-  "auto_approved": false,
-  "expected_review_time": "2026-07-14T08:00:00Z"
+ "claim_id": "wc_789",
+ "status": "pending", // cleaning auto-approve; repair needs Ops approval
+ "auto_approved": false,
+ "expected_review_time": "2026-07-14T08:00:00Z"
 }
 ```
 
@@ -470,8 +470,8 @@ Cancel warranty (refund flow).
 Body:
 ```jsonc
 {
-  "reason": "không hài lòng dịch vụ",
-  "confirm_terms_understood": true   // user acknowledged refund policy
+ "reason": "không hài lòng dịch vụ",
+ "confirm_terms_understood": true // user acknowledged refund policy
 }
 ```
 
@@ -486,8 +486,8 @@ Renew warranty for new period.
 Body:
 ```jsonc
 {
-  "payment_method": "gateway",
-  "apply_loyalty_discount": true   // 10% off if eligible
+ "payment_method": "gateway",
+ "apply_loyalty_discount": true // 10% off if eligible
 }
 ```
 
@@ -528,21 +528,21 @@ List variants của 1 type. Include stock info từ wms (real-time):
 Response 200:
 ```json
 {
-  "items": [
-    {
-      "variant_code": "mvar_capacitor_sanyo_35uf",
-      "brand": "Sanyo",
-      "model": "CBB60-35",
-      "sell_price": 80000,
-      "warranty_months": 6,
-      "stock": {
-        "personal": 3,
-        "shared_hcmc": 12,
-        "available": true,
-        "checked_at": "2026-05-27T08:14:32Z"
-      }
-    }
-  ]
+ "items": [
+ {
+ "variant_code": "mvar_capacitor_sanyo_35uf",
+ "brand": "Sanyo",
+ "model": "CBB60-35",
+ "sell_price": 80000,
+ "warranty_months": 6,
+ "stock": {
+ "personal": 3,
+ "shared_hcmc": 12,
+ "available": true,
+ "checked_at": "2026-05-27T08:14:32Z"
+ }
+ }
+ ]
 }
 ```
 
@@ -559,7 +559,7 @@ Body: partial update. Vd toggle online: `{ "is_online": true }`
 ### POST /agents/{agent_id}/skills
 Body: `{ "skill_code": "ac-mechanic", "level": 3, "certificate_url": "..." }`
 
-## 7. Partners endpoints (v3.3)
+## 7. Partners endpoints 
 
 ### GET /partners
 List partners. Scope `partners.read`.
@@ -569,20 +569,20 @@ Create partner. Scope `partners.create`.
 
 ```json
 {
-  "partner_type": "business",
-  "roles": ["customer", "supplier"],
-  "business_name": "Hùng AC Service",
-  "rep_name": "Nguyễn Hùng",
-  "rep_phone": "+84932841...",
-  "customer_config": {
-    "payment_mode": "prepaid_wallet",
-    "journey_mode": "full_10steps",
-    "default_dispatch_visibility": "private"
-  },
-  "supplier_config": {
-    "model": "commission_only",
-    "commission_percent": 6
-  }
+ "partner_type": "business",
+ "roles": ["customer", "supplier"],
+ "business_name": "Hùng AC Service",
+ "rep_name": "Nguyễn Hùng",
+ "rep_phone": "+84932841...",
+ "customer_config": {
+ "payment_mode": "prepaid_wallet",
+ "journey_mode": "full_10steps",
+ "default_dispatch_visibility": "private"
+ },
+ "supplier_config": {
+ "model": "commission_only",
+ "commission_percent": 6
+ }
 }
 ```
 
@@ -656,7 +656,7 @@ Receive payment events from inside. HMAC signature validation.
 ### POST /integrations/wms/stock-alert
 Receive stock low alerts from wms.
 
-## 11.5 PII endpoints (v4.0)
+## 11.5 PII endpoints 
 
 ### Response format · Masked vs Unmasked
 
@@ -675,15 +675,15 @@ X-Unmask-Available: phone,email,address_full
 X-Unmask-Endpoint: /api/v1/pii/unmask
 
 {
-  "id": "cus_01HX2M",
-  "name": "Nguyễn V. A.",
-  "phone": "0912****890",
-  "email": "ngu***@gmail.com",
-  "cccd": "0012****2345",
-  "bank_account": "1234*****0123",
-  "address_full": "*** Q.1, TP.HCM",
-  "country_code": "VN",
-  "created_at_utc": "2026-05-20T10:30:00Z"
+ "id": "cus_01HX2M",
+ "name": "Nguyễn V. A.",
+ "phone": "0912****890",
+ "email": "ngu***@gmail.com",
+ "cccd": "0012****2345",
+ "bank_account": "1234*****0123",
+ "address_full": "*** Q.1, TP.HCM",
+ "country_code": "VN",
+ "created_at_utc": "2026-05-20T10:30:00Z"
 }
 ```
 
@@ -704,11 +704,11 @@ X-Unmask-Available: email,address_full
 X-Unmask-Audit-Id: aud_01HXABCD
 
 {
-  "id": "cus_01HX2M",
-  "name": "Nguyễn Văn An",
-  "phone": "0912345890",         ← unmasked
-  "email": "ngu***@gmail.com",   ← still masked
-  ...
+ "id": "cus_01HX2M",
+ "name": "Nguyễn Văn An",
+ "phone": "0912345890", ← unmasked
+ "email": "ngu***@gmail.com", ← still masked
+ ...
 }
 ```
 
@@ -723,15 +723,15 @@ One-time unmask cho sensitive fields (CCCD, bank account, ID photo).
 ```http
 POST /api/v1/pii/unmask
 Authorization: Bearer <jwt>
-Authorization-Fresh: <mfa_proof_token>  ← required cho sensitive fields
+Authorization-Fresh: <mfa_proof_token> ← required cho sensitive fields
 Content-Type: application/json
 
 {
-  "entity_type": "customer",
-  "entity_id": "cus_01HX2M",
-  "fields": ["bank_account", "cccd"],
-  "reason": "Customer requested refund, verifying bank for transfer",
-  "ticket_id": "ZD-12345"
+ "entity_type": "customer",
+ "entity_id": "cus_01HX2M",
+ "fields": ["bank_account", "cccd"],
+ "reason": "Customer requested refund, verifying bank for transfer",
+ "ticket_id": "ZD-12345"
 }
 ```
 
@@ -741,13 +741,13 @@ Content-Type: application/json
 HTTP/1.1 200 OK
 
 {
-  "unmask_session_id": "ums_01HXABCD",
-  "expires_at_utc": "2026-05-28T11:30:00Z",
-  "audit_id": "aud_01HXABCE",
-  "data": {
-    "bank_account": "1234567890123",
-    "cccd": "001202012345"
-  }
+ "unmask_session_id": "ums_01HXABCD",
+ "expires_at_utc": "2026-05-28T11:30:00Z",
+ "audit_id": "aud_01HXABCE",
+ "data": {
+ "bank_account": "1234567890123",
+ "cccd": "001202012345"
+ }
 }
 ```
 
@@ -775,31 +775,31 @@ Authorization: Bearer <jwt-with-compliance.audit-scope>
 HTTP/1.1 200 OK
 
 {
-  "entity_id": "cus_01HX2M",
-  "total_accesses": 23,
-  "period": {"from": "2026-01-01", "to": "2026-05-28"},
-  "items": [
-    {
-      "audit_id": "aud_01H...",
-      "timestamp_utc": "2026-05-27T08:15:32Z",
-      "actor_id": "usr_csv1",
-      "actor_name": "Trần Thị B (CSKH)",
-      "actor_country": "VN",
-      "fields_accessed": ["phone"],
-      "reason": null,
-      "ticket_id": "ZD-12340"
-    },
-    {
-      "audit_id": "aud_01H...",
-      "timestamp_utc": "2026-05-26T14:22:10Z",
-      "actor_id": "usr_finance3",
-      "actor_name": "Lê Văn C (Finance)",
-      "actor_country": "VN",
-      "fields_accessed": ["bank_account", "cccd"],
-      "reason": "Refund processing for ticket ZD-12300",
-      "ticket_id": "ZD-12300"
-    }
-  ]
+ "entity_id": "cus_01HX2M",
+ "total_accesses": 23,
+ "period": {"from": "2026-01-01", "to": "2026-05-28"},
+ "items": [
+ {
+ "audit_id": "aud_01H...",
+ "timestamp_utc": "2026-05-27T08:15:32Z",
+ "actor_id": "usr_csv1",
+ "actor_name": "Trần Thị B (CSKH)",
+ "actor_country": "VN",
+ "fields_accessed": ["phone"],
+ "reason": null,
+ "ticket_id": "ZD-12340"
+ },
+ {
+ "audit_id": "aud_01H...",
+ "timestamp_utc": "2026-05-26T14:22:10Z",
+ "actor_id": "usr_finance3",
+ "actor_name": "Lê Văn C (Finance)",
+ "actor_country": "VN",
+ "fields_accessed": ["bank_account", "cccd"],
+ "reason": "Refund processing for ticket ZD-12300",
+ "ticket_id": "ZD-12300"
+ }
+ ]
 }
 ```
 
@@ -854,17 +854,17 @@ Sample stub:
 ```yaml
 openapi: 3.0.3
 info:
-  title: SMP Order Service
-  version: 1.0.0
+ title: SMP Order Service
+ version: 1.0.0
 servers:
-  - url: https://api.smp.vn/api/v1
+ - url: https://api.smp.vn/api/v1
 security:
-  - bearerAuth: []
+ - bearerAuth: []
 paths:
-  /orders:
-    post:
-      operationId: createOrder
-      ...
+ /orders:
+ post:
+ operationId: createOrder
+ ...
 ```
 
 ## 16. Testing

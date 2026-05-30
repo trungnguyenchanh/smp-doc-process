@@ -1,27 +1,5 @@
-<!-- 
-  ────────────────────────────────────────────────────────────────
-  📋 DOC STATUS NOTE
-  
-  Đây là tách từ trust-legal-policy-pack-v1.md (Section B).
-  Tập trung vào chính sách Thanh toán Tiền mặt (COD).
-  
-  ⚠️ STATUS: DRAFT · bắt buộc legal review (luật sư VN) trước công bố.
-  
-  Related docs:
-    - Doc 19 · Service Guarantee Policy
-    - Doc 21 · PDPL Data Policy
-    - Doc 15 · Business Rules (BR-PAY-COD-001 → 005)
-    - Doc 17 · Payment & Settlement Lifecycle (COD state machine)
-    - Doc 16 · Finance Ledger (agent_cod_receivable + cod_clearing)
-  
-  Author: SMP Tech Lead/CTO · Date: 2026-05-28
-  Status: DRAFT v1.0
-  ────────────────────────────────────────────────────────────────
--->
-
-# Doc 20 · COD Payment Policy · v1.0 (DRAFT)
-
-**Version**: 1.0 · **Date**: 2026-05-28 · **Status**: DRAFT — **bắt buộc legal review (luật sư VN) trước khi công bố/áp dụng** · **Audience**: Legal, Ops, Finance, BA
+# Doc 20 · COD Payment Policy · DRAFT
+**Status**: DRAFT — **bắt buộc legal review (luật sư VN) trước khi công bố/áp dụng** · **Audience**: Legal, Ops, Finance, BA
 
 > ⚠️ **Disclaimer**: Đây là bản thảo do team soạn để định hình chính sách, **không phải tư vấn pháp lý**. Mọi điều khoản công bố cho thợ/KH phải qua luật sư VN rà soát.
 

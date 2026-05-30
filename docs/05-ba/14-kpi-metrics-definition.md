@@ -1,5 +1,4 @@
 # SMP KPI & Metrics Definition
-
 **Audience**: BA, PM, Ops, Data team · **Updated**: v3.3
 
 ---
@@ -27,7 +26,7 @@ Tài liệu này định nghĩa **chính xác** các metrics SMP track ở dashb
 SELECT SUM(total_amount + discount_amount) AS gmv
 FROM orders
 WHERE current_stage IN ('09_completed', '10_rated')
-  AND created_at BETWEEN <from> AND <to>;
+ AND created_at BETWEEN <from> AND <to>;
 ```
 
 **Dimensions**: by period, by partner_id, by service_id, by city/district
@@ -42,7 +41,7 @@ WHERE current_stage IN ('09_completed', '10_rated')
 SELECT SUM(total_amount) - SUM(refund_amount)
 FROM orders
 WHERE current_stage IN ('09_completed', '10_rated')
-  AND created_at BETWEEN <from> AND <to>;
+ AND created_at BETWEEN <from> AND <to>;
 ```
 
 ### 2.3 SMP Revenue
@@ -55,7 +54,7 @@ SELECT SUM(order_steps.labor_price * commission_rate)
 FROM order_steps
 JOIN orders ON ...
 WHERE orders.current_stage IN ('09_completed', '10_rated')
-  AND orders.created_at BETWEEN <from> AND <to>
+ AND orders.created_at BETWEEN <from> AND <to>
 
 UNION ALL
 
@@ -63,7 +62,7 @@ UNION ALL
 SELECT SUM(material_variants.sell_price - material_variants.cost_price_avg) * quantity
 FROM order_step_materials
 WHERE source = 'reserved'
-  AND order step is completed
+ AND order step is completed
 
 UNION ALL
 
@@ -71,7 +70,7 @@ UNION ALL
 SELECT SUM(partners.supplier_config.saas_fee_monthly)
 FROM partners
 WHERE supplier_config.model IN ('saas_only', 'hybrid')
-  AND active in period
+ AND active in period
 ```
 
 **Note**: tính 3 nguồn revenue tách biệt, sau đó cộng để có total SMP revenue.
@@ -98,7 +97,7 @@ GROUP BY current_stage;
 SELECT COUNT(DISTINCT customer_id)
 FROM orders
 WHERE current_stage IN ('09_completed', '10_rated')
-  AND created_at BETWEEN <from> AND <to>;
+ AND created_at BETWEEN <from> AND <to>;
 ```
 
 ### 2.6 Repeat customer rate
@@ -107,13 +106,13 @@ WHERE current_stage IN ('09_completed', '10_rated')
 **Formula:**
 ```sql
 WITH customer_orders AS (
-  SELECT customer_id, COUNT(*) AS cnt
-  FROM orders
-  WHERE current_stage IN ('09_completed', '10_rated')
-  GROUP BY customer_id
+ SELECT customer_id, COUNT(*) AS cnt
+ FROM orders
+ WHERE current_stage IN ('09_completed', '10_rated')
+ GROUP BY customer_id
 )
 SELECT 
-  SUM(CASE WHEN cnt >= 2 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS repeat_rate_pct
+ SUM(CASE WHEN cnt >= 2 THEN 1 ELSE 0 END) * 100.0 / COUNT(*) AS repeat_rate_pct
 FROM customer_orders;
 ```
 
@@ -123,7 +122,7 @@ FROM customer_orders;
 SELECT AVG(total_amount)
 FROM orders
 WHERE current_stage IN ('09_completed', '10_rated')
-  AND created_at BETWEEN <from> AND <to>;
+ AND created_at BETWEEN <from> AND <to>;
 ```
 
 ## 3. Operational metrics (Ops Manager)
@@ -134,7 +133,7 @@ WHERE current_stage IN ('09_completed', '10_rated')
 **Formula:**
 ```sql
 SELECT 
-  SUM(CASE WHEN current_stage IN ('09_completed', '10_rated') THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+ SUM(CASE WHEN current_stage IN ('09_completed', '10_rated') THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
 FROM orders
 WHERE created_at BETWEEN <from> AND <to>;
 ```
@@ -145,7 +144,7 @@ WHERE created_at BETWEEN <from> AND <to>;
 **Formula:**
 ```sql
 SELECT 
-  SUM(CASE WHEN current_stage = 'cancelled' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+ SUM(CASE WHEN current_stage = 'cancelled' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
 FROM orders
 WHERE created_at BETWEEN <from> AND <to>;
 ```
@@ -160,16 +159,16 @@ WHERE created_at BETWEEN <from> AND <to>;
 **Formula:**
 ```sql
 SELECT 
-  SUM(CASE 
-    WHEN TIMESTAMPDIFF(MINUTE, created_at, accept_at) <= 5 
-    THEN 1 ELSE 0 END
-  ) * 100.0 / COUNT(*)
+ SUM(CASE 
+ WHEN TIMESTAMPDIFF(MINUTE, created_at, accept_at) <= 5 
+ THEN 1 ELSE 0 END
+ ) * 100.0 / COUNT(*)
 FROM (
-  SELECT o.created_at, MIN(log.created_at) AS accept_at
-  FROM orders o
-  JOIN order_stage_log log ON log.order_id = o.id
-  WHERE log.to_stage = '03_survey_accepted'
-  GROUP BY o.id
+ SELECT o.created_at, MIN(log.created_at) AS accept_at
+ FROM orders o
+ JOIN order_stage_log log ON log.order_id = o.id
+ WHERE log.to_stage = '03_survey_accepted'
+ GROUP BY o.id
 ) t;
 ```
 
@@ -204,10 +203,10 @@ WHERE current_stage IN ('09_completed', '10_rated');
 | 08_in_progress | service duration × 2 | Step too long |
 
 ```sql
-SELECT id, current_stage, TIMESTAMPDIFF(MINUTE, last_stage_change, NOW()) AS stuck_min
+SELECT id, current_stage, TIMESTAMPDIFF(MINUTE, last_stage_change, NOW) AS stuck_min
 FROM orders
 WHERE current_stage NOT IN ('09_completed', '10_rated', 'cancelled')
-  AND TIMESTAMPDIFF(MINUTE, last_stage_change, NOW()) > <threshold>;
+ AND TIMESTAMPDIFF(MINUTE, last_stage_change, NOW) > <threshold>;
 ```
 
 **Frequency**: Real-time alert (every 5 min cron)
@@ -218,10 +217,10 @@ WHERE current_stage NOT IN ('09_completed', '10_rated', 'cancelled')
 **Formula:**
 ```sql
 SELECT 
-  SUM(CASE WHEN manual_dispatched = TRUE THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+ SUM(CASE WHEN manual_dispatched = TRUE THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
 FROM orders
 WHERE current_stage IN ('09_completed', '10_rated')
-  AND created_at BETWEEN <from> AND <to>;
+ AND created_at BETWEEN <from> AND <to>;
 ```
 
 **Target**: ≤ 3%
@@ -234,21 +233,21 @@ WHERE current_stage IN ('09_completed', '10_rated')
 **Formula:**
 ```sql
 WITH agent_time AS (
-  SELECT 
-    agent_id,
-    SUM(TIMESTAMPDIFF(MINUTE, online_start, online_end)) AS online_minutes
-  FROM agent_sessions
-  WHERE date BETWEEN <from> AND <to>
-  GROUP BY agent_id
+ SELECT 
+ agent_id,
+ SUM(TIMESTAMPDIFF(MINUTE, online_start, online_end)) AS online_minutes
+ FROM agent_sessions
+ WHERE date BETWEEN <from> AND <to>
+ GROUP BY agent_id
 ),
 agent_busy AS (
-  SELECT 
-    execution_agent_id AS agent_id,
-    SUM(TIMESTAMPDIFF(MINUTE, started_at, completed_at)) AS busy_minutes
-  FROM order_steps
-  WHERE status = 'completed'
-    AND started_at BETWEEN <from> AND <to>
-  GROUP BY execution_agent_id
+ SELECT 
+ execution_agent_id AS agent_id,
+ SUM(TIMESTAMPDIFF(MINUTE, started_at, completed_at)) AS busy_minutes
+ FROM order_steps
+ WHERE status = 'completed'
+ AND started_at BETWEEN <from> AND <to>
+ GROUP BY execution_agent_id
 )
 SELECT t.agent_id, b.busy_minutes * 100.0 / t.online_minutes AS utilization_pct
 FROM agent_time t
@@ -276,11 +275,11 @@ GROUP BY agent_id;
 **Per period:**
 ```sql
 SELECT 
-  os.execution_agent_id,
-  SUM(os.labor_price * (1 - commission_rate)) AS earnings
+ os.execution_agent_id,
+ SUM(os.labor_price * (1 - commission_rate)) AS earnings
 FROM order_steps os
 WHERE os.status = 'completed'
-  AND os.completed_at BETWEEN <from> AND <to>
+ AND os.completed_at BETWEEN <from> AND <to>
 GROUP BY os.execution_agent_id;
 ```
 
@@ -290,8 +289,8 @@ GROUP BY os.execution_agent_id;
 **Formula:**
 ```sql
 SELECT 
-  agent_id,
-  SUM(CASE WHEN response = 'accept' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+ agent_id,
+ SUM(CASE WHEN response = 'accept' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
 FROM dispatch_invitations
 WHERE created_at BETWEEN <from> AND <to>
 GROUP BY agent_id;
@@ -305,8 +304,8 @@ GROUP BY agent_id;
 **Formula:**
 ```sql
 SELECT 
-  agent_id,
-  SUM(CASE WHEN no_show = TRUE THEN 1 ELSE 0 END) * 100.0 / total_assigned
+ agent_id,
+ SUM(CASE WHEN no_show = TRUE THEN 1 ELSE 0 END) * 100.0 / total_assigned
 FROM agent_performance
 WHERE date BETWEEN <from> AND <to>;
 ```
@@ -323,9 +322,9 @@ WHERE date BETWEEN <from> AND <to>;
 SELECT SUM(total_amount)
 FROM orders
 WHERE source = 'partner_customer'
-  AND partner_id = <partner>
-  AND current_stage IN ('09_completed', '10_rated')
-  AND created_at BETWEEN <from> AND <to>;
+ AND partner_id = <partner>
+ AND current_stage IN ('09_completed', '10_rated')
+ AND created_at BETWEEN <from> AND <to>;
 ```
 
 ### 5.2 Partner active rate
@@ -333,13 +332,13 @@ WHERE source = 'partner_customer'
 
 ```sql
 SELECT 
-  SUM(CASE WHEN order_count > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+ SUM(CASE WHEN order_count > 0 THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
 FROM (
-  SELECT p.id, COUNT(o.id) AS order_count
-  FROM partners p
-  LEFT JOIN orders o ON o.partner_id = p.id AND o.created_at BETWEEN <from> AND <to>
-  WHERE p.status = 'active'
-  GROUP BY p.id
+ SELECT p.id, COUNT(o.id) AS order_count
+ FROM partners p
+ LEFT JOIN orders o ON o.partner_id = p.id AND o.created_at BETWEEN <from> AND <to>
+ WHERE p.status = 'active'
+ GROUP BY p.id
 ) t;
 ```
 
@@ -348,20 +347,20 @@ FROM (
 
 ```sql
 WITH partner_daily_spend AS (
-  SELECT partner_id, AVG(daily_amount) AS avg_daily
-  FROM (
-    SELECT partner_id, DATE(created_at) AS d, SUM(total_amount) AS daily_amount
-    FROM orders
-    WHERE source = 'partner_customer'
-      AND created_at >= NOW() - INTERVAL 30 DAY
-    GROUP BY partner_id, d
-  ) t
-  GROUP BY partner_id
+ SELECT partner_id, AVG(daily_amount) AS avg_daily
+ FROM (
+ SELECT partner_id, DATE(created_at) AS d, SUM(total_amount) AS daily_amount
+ FROM orders
+ WHERE source = 'partner_customer'
+ AND created_at >= NOW - INTERVAL 30 DAY
+ GROUP BY partner_id, d
+ ) t
+ GROUP BY partner_id
 )
 SELECT 
-  p.id, p.business_name, p.customer_config->>'$.wallet_balance' AS balance, 
-  ds.avg_daily * 7 AS reserve_needed,
-  CASE WHEN balance < ds.avg_daily * 7 THEN 'LOW' ELSE 'OK' END AS status
+ p.id, p.business_name, p.customer_config->>'$.wallet_balance' AS balance, 
+ ds.avg_daily * 7 AS reserve_needed,
+ CASE WHEN balance < ds.avg_daily * 7 THEN 'LOW' ELSE 'OK' END AS status
 FROM partners p
 JOIN partner_daily_spend ds ON ds.partner_id = p.id;
 ```
@@ -381,9 +380,9 @@ GROUP BY partner_id;
 **Formula:**
 ```sql
 SELECT 
-  partner_id,
-  SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_count,
-  COUNT(*) AS total_count
+ partner_id,
+ SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) AS active_count,
+ COUNT(*) AS total_count
 FROM agents
 WHERE partner_id IS NOT NULL
 GROUP BY partner_id;
@@ -420,11 +419,11 @@ GROUP BY rating;
 
 ```sql
 WITH t AS (
-  SELECT 
-    SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS promoters,
-    SUM(CASE WHEN rating <= 3 THEN 1 ELSE 0 END) AS detractors,
-    COUNT(*) AS total
-  FROM order_ratings
+ SELECT 
+ SUM(CASE WHEN rating = 5 THEN 1 ELSE 0 END) AS promoters,
+ SUM(CASE WHEN rating <= 3 THEN 1 ELSE 0 END) AS detractors,
+ COUNT(*) AS total
+ FROM order_ratings
 )
 SELECT (promoters - detractors) * 100.0 / total AS nps FROM t;
 ```
@@ -446,7 +445,7 @@ FROM ...
 SELECT AVG(TIMESTAMPDIFF(HOUR, opened_at, resolved_at))
 FROM disputes
 WHERE resolved_at IS NOT NULL
-  AND resolved_at BETWEEN <from> AND <to>;
+ AND resolved_at BETWEEN <from> AND <to>;
 ```
 
 **Target**: ≤ 48h
@@ -457,7 +456,7 @@ WHERE resolved_at IS NOT NULL
 **Formula:**
 ```sql
 SELECT 
-  SUM(CASE WHEN source = 'free_form' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+ SUM(CASE WHEN source = 'free_form' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
 FROM order_step_materials
 WHERE created_at BETWEEN <from> AND <to>;
 ```
@@ -475,8 +474,8 @@ WHERE created_at BETWEEN <from> AND <to>;
 **Formula:**
 ```sql
 SELECT 
-  SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) AS collected,
-  SUM(CASE WHEN payment_status = 'pending' THEN total_amount ELSE 0 END) AS receivable
+ SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) AS collected,
+ SUM(CASE WHEN payment_status = 'pending' THEN total_amount ELSE 0 END) AS receivable
 FROM orders
 WHERE created_at BETWEEN <from> AND <to>;
 ```
@@ -499,12 +498,12 @@ SELECT SUM(amount) FROM agent_payouts WHERE status = 'pending';
 **Formula:**
 ```sql
 SELECT 
-  SUM((mv.sell_price - mv.cost_price_avg) * osm.quantity) AS total_margin
+ SUM((mv.sell_price - mv.cost_price_avg) * osm.quantity) AS total_margin
 FROM order_step_materials osm
 JOIN material_variants mv ON osm.material_variant_id = mv.id
 WHERE osm.source = 'reserved'
-  AND osm.step is completed
-  AND period;
+ AND osm.step is completed
+ AND period;
 ```
 
 ## 8. Technical metrics (Engineering)
@@ -532,7 +531,7 @@ sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total
 ### 8.3 Webhook delivery success rate
 ```sql
 SELECT 
-  SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
+ SUM(CASE WHEN status = 'success' THEN 1 ELSE 0 END) * 100.0 / COUNT(*)
 FROM webhook_delivery_log
 WHERE sent_at BETWEEN <from> AND <to>;
 ```
@@ -637,45 +636,45 @@ WHERE sent_at BETWEEN <from> AND <to>;
 
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
-│                       WRITE SIDE (Commands)                     │
-│                                                                 │
-│   API → service → MySQL primary                                 │
-│                       │                                         │
-│                       │ binlog                                  │
-│                       ▼                                         │
-│                  ┌──────────┐                                   │
-│                  │ Debezium │  CDC connector                    │
-│                  └────┬─────┘                                   │
-│                       │                                         │
-│                       ▼                                         │
-│              ┌────────────────┐                                 │
-│              │  Kafka topics  │                                 │
-│              └────────┬───────┘                                 │
+│ WRITE SIDE (Commands) │
+│ │
+│ API → service → MySQL primary │
+│ │ │
+│ │ binlog │
+│ ▼ │
+│ ┌──────────┐ │
+│ │ Debezium │ CDC connector │
+│ └────┬─────┘ │
+│ │ │
+│ ▼ │
+│ ┌────────────────┐ │
+│ │ Kafka topics │ │
+│ └────────┬───────┘ │
 └───────────────────────┼─────────────────────────────────────────┘
-                        │
+ │
 ┌───────────────────────┼─────────────────────────────────────────┐
-│                       ▼            READ SIDE (Queries)          │
-│              ┌────────────────┐                                 │
-│              │  ES sink       │  (Kafka Connect)                │
-│              │  Connector     │                                 │
-│              └────────┬───────┘                                 │
-│                       │                                         │
-│                       ▼                                         │
-│              ┌────────────────┐                                 │
-│              │ Elasticsearch  │  ◄── read model                 │
-│              │  indices:      │                                 │
-│              │  orders-YYYY-MM│  (daily, denormalized)          │
-│              │  agents        │                                 │
-│              │  partners      │                                 │
-│              │  dispatch-runs │                                 │
-│              └────────┬───────┘                                 │
-│                       │                                         │
-│        ┌──────────────┼──────────────┐                          │
-│        ▼              ▼              ▼                          │
-│   ┌─────────┐   ┌──────────┐   ┌──────────┐                     │
-│   │Grafana  │   │Admin UI  │   │Reports   │                     │
-│   │dashboard│   │analytics │   │CSV/Excel │                     │
-│   └─────────┘   └──────────┘   └──────────┘                     │
+│ ▼ READ SIDE (Queries) │
+│ ┌────────────────┐ │
+│ │ ES sink │ (Kafka Connect) │
+│ │ Connector │ │
+│ └────────┬───────┘ │
+│ │ │
+│ ▼ │
+│ ┌────────────────┐ │
+│ │ Elasticsearch │ ◄── read model │
+│ │ indices: │ │
+│ │ orders-YYYY-MM│ (daily, denormalized) │
+│ │ agents │ │
+│ │ partners │ │
+│ │ dispatch-runs │ │
+│ └────────┬───────┘ │
+│ │ │
+│ ┌──────────────┼──────────────┐ │
+│ ▼ ▼ ▼ │
+│ ┌─────────┐ ┌──────────┐ ┌──────────┐ │
+│ │Grafana │ │Admin UI │ │Reports │ │
+│ │dashboard│ │analytics │ │CSV/Excel │ │
+│ └─────────┘ └──────────┘ └──────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -701,12 +700,12 @@ Cập nhật cách truy vấn từng metric:
 ```sql
 -- ❌ v3.x: SQL on MySQL replica
 SELECT
-  district,
-  SUM(total_amount) AS gmv,
-  COUNT(*) AS order_count
+ district,
+ SUM(total_amount) AS gmv,
+ COUNT(*) AS order_count
 FROM orders
-WHERE completed_at_utc >= DATE_SUB(NOW(), INTERVAL 1 DAY)
-  AND status = 'paid'
+WHERE completed_at_utc >= DATE_SUB(NOW, INTERVAL 1 DAY)
+ AND status = 'paid'
 GROUP BY district
 ORDER BY gmv DESC;
 -- ~3-5 seconds with 1M orders
@@ -716,23 +715,23 @@ ORDER BY gmv DESC;
 // ✅ v4.0: Elasticsearch aggregation
 POST /orders-*/_search
 {
-  "size": 0,
-  "query": {
-    "bool": {
-      "filter": [
-        {"range": {"completed_at_utc": {"gte": "now-1d/d"}}},
-        {"term": {"status": "paid"}}
-      ]
-    }
-  },
-  "aggs": {
-    "by_district": {
-      "terms": {"field": "district", "size": 100, "order": {"gmv": "desc"}},
-      "aggs": {
-        "gmv": {"sum": {"field": "total_amount"}}
-      }
-    }
-  }
+ "size": 0,
+ "query": {
+ "bool": {
+ "filter": [
+ {"range": {"completed_at_utc": {"gte": "now-1d/d"}}},
+ {"term": {"status": "paid"}}
+ ]
+ }
+ },
+ "aggs": {
+ "by_district": {
+ "terms": {"field": "district", "size": 100, "order": {"gmv": "desc"}},
+ "aggs": {
+ "gmv": {"sum": {"field": "total_amount"}}
+ }
+ }
+ }
 }
 // ~200-500ms với same data
 ```
@@ -743,8 +742,8 @@ POST /orders-*/_search
 -- ❌ v3.x: MySQL LIKE on multiple columns
 SELECT * FROM orders
 WHERE customer_name LIKE '%nguyen%'
-   OR address_line LIKE '%nguyen%'
-   OR notes LIKE '%nguyen%'
+ OR address_line LIKE '%nguyen%'
+ OR notes LIKE '%nguyen%'
 ORDER BY created_at DESC LIMIT 50;
 -- 2-5 seconds, no index usage
 ```
@@ -753,15 +752,15 @@ ORDER BY created_at DESC LIMIT 50;
 // ✅ v4.0: Elasticsearch multi_match
 POST /orders-*/_search
 {
-  "query": {
-    "multi_match": {
-      "query": "nguyen",
-      "fields": ["customer_name^3", "address_line", "notes"],
-      "fuzziness": "AUTO"
-    }
-  },
-  "sort": [{"created_at_utc": "desc"}],
-  "size": 50
+ "query": {
+ "multi_match": {
+ "query": "nguyen",
+ "fields": ["customer_name^3", "address_line", "notes"],
+ "fuzziness": "AUTO"
+ }
+ },
+ "sort": [{"created_at_utc": "desc"}],
+ "size": 50
 }
 // 50-100ms với analyzer + inverted index
 ```
@@ -780,44 +779,44 @@ Critical UX rule: **không hiển thị dashboard mà không có lag indicator**
 
 Daily rolling indices cho `orders`:
 ```text
-orders-2026-05-28   ← hot (today, write + read)
-orders-2026-05-27   ← hot (yesterday)
-orders-2026-05-26   ← warm (older, read-only)
+orders-2026-05-28 ← hot (today, write + read)
+orders-2026-05-27 ← hot (yesterday)
+orders-2026-05-26 ← warm (older, read-only)
 ...
-orders-2026-04-*    ← warm → cold tier
+orders-2026-04-* ← warm → cold tier
 ```
 
 **Index template** (Elasticsearch):
 ```json
 PUT /_index_template/orders-template
 {
-  "index_patterns": ["orders-*"],
-  "template": {
-    "settings": {
-      "number_of_shards": 3,
-      "number_of_replicas": 1,
-      "refresh_interval": "5s"
-    },
-    "mappings": {
-      "properties": {
-        "order_id": {"type": "keyword"},
-        "customer_id": {"type": "keyword"},
-        "customer_name": {
-          "type": "text",
-          "fields": {"keyword": {"type": "keyword"}}
-        },
-        "country_code": {"type": "keyword"},
-        "currency": {"type": "keyword"},
-        "total_amount": {"type": "long"},
-        "status": {"type": "keyword"},
-        "district": {"type": "keyword"},
-        "city": {"type": "keyword"},
-        "location": {"type": "geo_point"},
-        "created_at_utc": {"type": "date"},
-        "completed_at_utc": {"type": "date"}
-      }
-    }
-  }
+ "index_patterns": ["orders-*"],
+ "template": {
+ "settings": {
+ "number_of_shards": 3,
+ "number_of_replicas": 1,
+ "refresh_interval": "5s"
+ },
+ "mappings": {
+ "properties": {
+ "order_id": {"type": "keyword"},
+ "customer_id": {"type": "keyword"},
+ "customer_name": {
+ "type": "text",
+ "fields": {"keyword": {"type": "keyword"}}
+ },
+ "country_code": {"type": "keyword"},
+ "currency": {"type": "keyword"},
+ "total_amount": {"type": "long"},
+ "status": {"type": "keyword"},
+ "district": {"type": "keyword"},
+ "city": {"type": "keyword"},
+ "location": {"type": "geo_point"},
+ "created_at_utc": {"type": "date"},
+ "completed_at_utc": {"type": "date"}
+ }
+ }
+ }
 }
 ```
 
@@ -830,11 +829,11 @@ ILM (Index Lifecycle Management):
 ### 10.6.6 Failover
 
 ```text
-Primary path:      Service → ES query
-                              ▼ if ES down
-Fallback path:     Service → MySQL replica
-                              ▼ if also down
-Emergency:         Service → return cached snapshot (1h old) + alert
+Primary path: Service → ES query
+ ▼ if ES down
+Fallback path: Service → MySQL replica
+ ▼ if also down
+Emergency: Service → return cached snapshot (1h old) + alert
 ```
 
 Circuit breaker pattern: nếu ES timeout > 3 lần trong 1 phút, mở circuit, route 100% traffic sang MySQL fallback trong 30s.

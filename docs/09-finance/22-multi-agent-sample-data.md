@@ -1,8 +1,8 @@
 # Sample Data · Top 10 Services · Step Weights + Role Splits
 
-> **Status**: DRAFT for review by BA + Finance + Ops teams · v3.5+  
-> **Date**: 2026-05-29  
-> **Owner**: Documentation team (Claude AI draft based on Vietnam home services context)  
+> **Status**: DRAFT for review by BA + Finance + Ops teams · v3.5+ 
+> **Date**: 2026-05-29 
+> **Owner**: Documentation team (Claude AI draft based on Vietnam home services context) 
 > **Action required**: Anh + Finance + Ops review từng service, chỉnh số liệu theo thực tế trước khi seed production.
 
 > ⚠️ **Disclaimer**: Đây là **draft proposal** dựa trên hiểu biết chung về home services tại VN. Các số liệu cụ thể (weights + splits) cần Finance + Ops review xác nhận. Không seed thẳng vào production trước khi sign-off.
@@ -187,7 +187,7 @@ UPDATE service_steps SET default_step_weight_bps = 4000 WHERE service_id = 1 AND
 UPDATE service_steps SET default_step_weight_bps = 2500 WHERE service_id = 1 AND sequence_no = 4;
 
 -- 2. svc_ac_install (service_id=2)
-UPDATE service_steps SET default_step_weight_bps =  800 WHERE service_id = 2 AND sequence_no = 1;
+UPDATE service_steps SET default_step_weight_bps = 800 WHERE service_id = 2 AND sequence_no = 1;
 UPDATE service_steps SET default_step_weight_bps = 2500 WHERE service_id = 2 AND sequence_no = 2;
 UPDATE service_steps SET default_step_weight_bps = 2500 WHERE service_id = 2 AND sequence_no = 3;
 UPDATE service_steps SET default_step_weight_bps = 2700 WHERE service_id = 2 AND sequence_no = 4;
@@ -197,9 +197,9 @@ UPDATE service_steps SET default_step_weight_bps = 1500 WHERE service_id = 2 AND
 
 -- Verify: each service SUM = 10000
 SELECT 
-  s.service_code, 
-  s.name, 
-  SUM(ss.default_step_weight_bps) AS total_weight_bps
+ s.service_code, 
+ s.name, 
+ SUM(ss.default_step_weight_bps) AS total_weight_bps
 FROM services s
 JOIN service_steps ss ON s.id = ss.service_id
 GROUP BY s.id
@@ -209,25 +209,25 @@ HAVING total_weight_bps != 10000;
 -- Seed service_step_role_splits
 -- Example for svc_ac_repair step 2 "Tháo dỡ" (service_step_id assumed 5)
 INSERT INTO service_step_role_splits 
-  (service_step_id, role, specialty, default_split_bps, min_required, max_allowed)
+ (service_step_id, role, specialty, default_split_bps, min_required, max_allowed)
 VALUES
-  (5, 'lead', NULL, 6000, 1, 1),
-  (5, 'helper', NULL, 4000, 1, 2);
+ (5, 'lead', NULL, 6000, 1, 1),
+ (5, 'helper', NULL, 4000, 1, 2);
 
 -- svc_ac_install step 4 "Lắp dàn lạnh + đấu điện" with electrician
 -- service_step_id assumed 9
 INSERT INTO service_step_role_splits VALUES
-  (9, 'lead', NULL, 4000, 1, 1),
-  (9, 'specialist', 'electrician', 4000, 1, 1),
-  (9, 'helper', NULL, 2000, 0, 1);
+ (9, 'lead', NULL, 4000, 1, 1),
+ (9, 'specialist', 'electrician', 4000, 1, 1),
+ (9, 'helper', NULL, 2000, 0, 1);
 
 -- ... (full seed for all 10 services in implementation)
 
 -- Verify per step SUM = 10000
 SELECT 
-  ss.service_step_id,
-  SUM(ss.default_split_bps) AS total_split_bps,
-  COUNT(*) FILTER (WHERE role = 'lead') AS lead_count
+ ss.service_step_id,
+ SUM(ss.default_split_bps) AS total_split_bps,
+ COUNT(*) FILTER (WHERE role = 'lead') AS lead_count
 FROM service_step_role_splits ss
 GROUP BY ss.service_step_id
 HAVING total_split_bps != 10000 OR lead_count != 1;
@@ -258,4 +258,4 @@ Khi v3.5 deploy:
 3. **Test data**: seed 10 services trên trong dev/staging trước khi prod
 4. **Production cutover**: feature flag `ENABLE_MULTI_AGENT=false` ban đầu → migrate data → enable cho 10% traffic test → ramp up
 
-Xem [MIGRATION-PLAN-v4 §Phase 1](MIGRATION-PLAN-v4.md) for detailed timeline.
+Xem 

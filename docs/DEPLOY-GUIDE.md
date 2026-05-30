@@ -75,15 +75,15 @@ git push origin main
 
 1. Vào https://github.com/trungnguyenchanh/smp-doc-process
 2. Kiểm tra hiển thị 9 folders:
-   - `01-architecture/`
-   - `02-database/`
-   - `03-backend/`
-   - `04-frontend/` (empty placeholder, dành cho tương lai)
-   - `05-ba/`
-   - `06-qa/`
-   - `07-devops/`
-   - `08-security/`
-   - `99-templates/` (empty placeholder)
+ - `01-architecture/`
+ - `02-database/`
+ - `03-backend/`
+ - `04-frontend/` (empty placeholder, dành cho tương lai)
+ - `05-ba/`
+ - `06-qa/`
+ - `07-devops/`
+ - `08-security/`
+ - `99-templates/` (empty placeholder)
 3. `README.md` render tự động ở trang chính
 4. Click 1 doc bất kỳ để verify markdown render đúng (bảng, code block)
 
@@ -183,7 +183,7 @@ git push origin main
 Mỗi lần sửa docs:
 ```bash
 cd ~/projects/smp-doc-process
-git pull origin main          # Lấy thay đổi mới nhất
+git pull origin main # Lấy thay đổi mới nhất
 # ... sửa file ...
 git add .
 git commit -m "docs(ba): update BR-DISP-003 timeout"

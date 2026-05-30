@@ -1,5 +1,4 @@
 # SMP Business Rules
-
 **Audience**: BA, PM, Dev, QC, Ops · **Updated**: v3.3
 
 ---
@@ -57,20 +56,20 @@ Mỗi dispatch round có timeout **60 giây** (production), **30 giây** (dev/st
 **Format mới (v4.0 YAML)**:
 ```yaml
 - id: vn.dispatch.001
-  name: "Round timeout Vietnam"
-  category: dispatch
-  description: "Mỗi dispatch round có timeout 60s production, 30s dev/staging."
-  enabled: true
-  priority: 100
-  when: "context.country_code == 'VN'"
-  then:
-    round_timeout_seconds: 60
-  overrides:
-    - when: "context.env in ['dev', 'staging']"
-      then:
-        round_timeout_seconds: 30
-  changelog:
-    - { version: "3.0", date: "2026-01-15", author: "BA team", change: "Initial" }
+ name: "Round timeout Vietnam"
+ category: dispatch
+ description: "Mỗi dispatch round có timeout 60s production, 30s dev/staging."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ round_timeout_seconds: 60
+ overrides:
+ - when: "context.env in ['dev', 'staging']"
+ then:
+ round_timeout_seconds: 30
+ changelog:
+ - { version: "3.0", date: "2026-01-15", author: "BA team", change: "Initial" }
 ```
 
 ### Migration roadmap
@@ -91,49 +90,49 @@ maintainers: ["ba-team@smp.vn"]
 
 # Context schema · các biến rule có thể reference
 context_schema:
-  country_code: string    # 'VN', 'US', 'CN'
-  env: string              # 'dev', 'staging', 'prod'
-  order: object            # full order entity
-  agent: object            # full agent entity
-  customer: object         # full customer entity
-  partner: object | null   # nếu order qua partner
-  now: timestamp           # UTC timestamp
+ country_code: string # 'VN', 'US', 'CN'
+ env: string # 'dev', 'staging', 'prod'
+ order: object # full order entity
+ agent: object # full agent entity
+ customer: object # full customer entity
+ partner: object | null # nếu order qua partner
+ now: timestamp # UTC timestamp
 
 rules:
-  # === DISPATCH ===
-  - id: vn.dispatch.001
-    name: "Round timeout"
-    # ... (như trên)
+ # === DISPATCH ===
+ - id: vn.dispatch.001
+ name: "Round timeout"
+ # ... (như trên)
 
-  - id: vn.dispatch.002
-    name: "Max rounds"
-    when: "context.country_code == 'VN'"
-    then:
-      max_rounds: 3
+ - id: vn.dispatch.002
+ name: "Max rounds"
+ when: "context.country_code == 'VN'"
+ then:
+ max_rounds: 3
 
-  # === PRICING ===
-  - id: vn.pricing.001
-    name: "Labor price multiplier by level"
-    when: "context.country_code == 'VN'"
-    then:
-      multiplier_map:
-        junior: 0.8
-        mid: 1.0
-        senior: 1.3
+ # === PRICING ===
+ - id: vn.pricing.001
+ name: "Labor price multiplier by level"
+ when: "context.country_code == 'VN'"
+ then:
+ multiplier_map:
+ junior: 0.8
+ mid: 1.0
+ senior: 1.3
 
-  - id: vn.pricing.007
-    name: "VAT Vietnam"
-    when: "context.country_code == 'VN'"
-    then:
-      vat_rate: 0.10
+ - id: vn.pricing.007
+ name: "VAT Vietnam"
+ when: "context.country_code == 'VN'"
+ then:
+ vat_rate: 0.10
 
-  - id: sg.pricing.007
-    name: "GST Singapore"
-    when: "context.country_code == 'SG'"
-    then:
-      vat_rate: 0.09
+ - id: sg.pricing.007
+ name: "GST Singapore"
+ when: "context.country_code == 'SG'"
+ then:
+ vat_rate: 0.09
 
-  # ... 80+ rules
+ # ... 80+ rules
 ```
 
 ### Đọc rules trong code Go (v4.0 preview)
@@ -142,24 +141,24 @@ rules:
 import "github.com/expr-lang/expr"
 
 type RulesEngine struct {
-    rules []Rule
-    cache map[string]*vm.Program // compiled expressions
+ rules []Rule
+ cache map[string]*vm.Program // compiled expressions
 }
 
 func (e *RulesEngine) Evaluate(category string, ctx Context) map[string]any {
-    var matched []Rule
-    for _, r := range e.rules {
-        if r.Category != category || !r.Enabled {
-            continue
-        }
-        program := e.cache[r.ID]
-        result, err := expr.Run(program, ctx)
-        if err == nil && result.(bool) {
-            matched = append(matched, r)
-        }
-    }
-    // sort by priority, merge `then` results
-    return mergeThens(matched)
+ var matched []Rule
+ for _, r := range e.rules {
+ if r.Category != category || !r.Enabled {
+ continue
+ }
+ program := e.cache[r.ID]
+ result, err := expr.Run(program, ctx)
+ if err == nil && result.(bool) {
+ matched = append(matched, r)
+ }
+ }
+ // sort by priority, merge `then` results
+ return mergeThens(matched)
 }
 
 // Usage trong dispatch-engine:
@@ -191,12 +190,12 @@ Agent qualified để nhận đơn khi:
 - KYC level ≥ basic
 - Không bị suspended trong tháng
 
-### BR-DISP-005 · Private dispatch logic (v3.3)
+### BR-DISP-005 · Private dispatch logic 
 Nếu `orders.source = 'partner_customer'` AND `dispatch_visibility = 'private'`:
 - **Tất cả** rounds **chỉ** dispatch cho agents thuộc `partner_id` của đơn
 - Nếu 3 rounds fail → escalate to ops (NOT mở rộng cho thợ partner khác)
 
-### BR-DISP-006 · Open dispatch with partner preference (v3.3)
+### BR-DISP-006 · Open dispatch with partner preference 
 Nếu `dispatch_visibility = 'open'` AND `partner_id != NULL`:
 - **Round 1**: dispatch cho agents của partner trước
 - **Round 2-3**: mở rộng cho tất cả agents qualified
@@ -238,9 +237,9 @@ total = labor + material + survey - discount + vat
 ### BR-PRICE-004 · Survey fee policy
 - Customer trả survey fee TRƯỚC khi Survey Agent xuất phát (default 80,000đ)
 - Survey fee:
-  - Hoàn 100% nếu Survey Agent **không đến** trong cam kết (no-show)
-  - Hoàn 50% nếu customer **từ chối** báo giá (compensate cho thợ đã đi)
-  - Không hoàn nếu khách **duyệt** báo giá (đã được trừ vào tổng đơn)
+ - Hoàn 100% nếu Survey Agent **không đến** trong cam kết (no-show)
+ - Hoàn 50% nếu customer **từ chối** báo giá (compensate cho thợ đã đi)
+ - Không hoàn nếu khách **duyệt** báo giá (đã được trừ vào tổng đơn)
 
 ### BR-PRICE-005 · Voucher discount
 - Customer nhập voucher_code → SMP gọi `inside.vouchers.validate(code, customer_id, amount)`
@@ -251,7 +250,7 @@ total = labor + material + survey - discount + vat
 ### BR-PRICE-006 · Surge applies to labor only
 Surge multiplier áp dụng cho `labor_price`, **không** áp dụng cho `material_price`.
 
-### BR-PRICE-007 · Partner pricing override (v3.3)
+### BR-PRICE-007 · Partner pricing override 
 Nếu partner có custom pricing config:
 - `partners.customer_config.labor_discount_percent`: giảm % labor cho partner đó
 - `partners.customer_config.no_material_markup`: nếu true, partner trả material theo cost_price (không markup)
@@ -324,7 +323,7 @@ Khi tạo đơn `partner_customer`:
 - Sau 10 đơn completed + rating ≥ 4.0 → có thể upgrade to full (request)
 - Upgrade to full requires submit thêm certificate + insurance
 
-### BR-KYC-003 · Partner KYC levels (v3.3)
+### BR-KYC-003 · Partner KYC levels 
 | Level | Required docs | Allowed actions |
 |---|---|---|
 | `pending` | None | View only, can't create orders |
@@ -428,7 +427,7 @@ Agent có thể chỉ định dùng material từ kho cá nhân (warehouse_type 
 
 ---
 
-## G · Partner Platform Rules (v3.3)
+## G · Partner Platform Rules 
 
 ### BR-PTN-001 · Partner types
 - `business`: có GPKD, MST, rep_name (đại diện pháp luật) — invoice xuất tên công ty
@@ -477,7 +476,7 @@ Nếu partner có ≥ 5 active agents AND `customer_config.default_dispatch_visi
 
 ---
 
-## H · Integration Rules (v3.2)
+## H · Integration Rules 
 
 ### BR-INT-001 · Customer source of truth
 - `inside` là source of truth cho customer profile + payment methods + vouchers
@@ -617,17 +616,17 @@ Auto-suspend partner nếu:
 ### BR-WARRANTY-001 · Warranty certificate auto-issuance
 - **Trigger**: Order state transition → `completed`
 - **Action**:
-  - Compute `warranty_until = completed_at_utc + warranty_days` (lookup từ catalog)
-  - Emit event `WarrantyIssued` (xem [Doc 18](../09-finance/18-event-catalog.md))
-  - Notification gửi cho KH (in-app + push)
+ - Compute `warranty_until = completed_at_utc + warranty_days` (lookup từ catalog)
+ - Emit event `WarrantyIssued` (xem [Doc 18](../09-finance/18-event-catalog.md))
+ - Notification gửi cho KH (in-app + push)
 - **Exception**: Nếu `service.warranty_days = 0` (vd survey-only), không issue certificate
 
 ### BR-WARRANTY-002 · Warranty validity check
 - **Khi nào**: KH mở yêu cầu bảo hành
 - **Check**:
-  - `now_utc < warranty_until`? → continue
-  - Lỗi có thuộc list được bảo hành (tay nghề/linh kiện)? → continue
-  - Không thuộc list loại trừ (Doc 19 section 3)? → continue
+ - `now_utc < warranty_until`? → continue
+ - Lỗi có thuộc list được bảo hành (tay nghề/linh kiện)? → continue
+ - Không thuộc list loại trừ (Doc 19 section 3)? → continue
 - **Action nếu PASS**: Tạo re-service order với `parent_order_id` link, no charge customer
 - **Action nếu FAIL**: Trả lỗi với reason cụ thể (expired / excluded category / external damage)
 
@@ -677,17 +676,17 @@ Auto-suspend partner nếu:
 ### BR-COD-004 · COD shortfall handling
 - **Trigger**: Agent remit < `agent_cod_receivable` (thiếu `var` VND)
 - **Action**:
-  - Ghi `Dr agent_debt var | Cr agent_cod_receivable var` (Doc 16 §3.4)
-  - Block payout đến khi `agent_debt = 0`
-  - Notify agent với reason + amount due
+ - Ghi `Dr agent_debt var | Cr agent_cod_receivable var` (Doc 16 §3.4)
+ - Block payout đến khi `agent_debt = 0`
+ - Notify agent với reason + amount due
 - **Pattern detection**: Nếu shortfall ≥ 3 lần trong tháng → review + tạm đình chỉ COD
 
 ### BR-COD-005 · COD refund before remit
 - **Scenario**: KH dispute đơn COD đã collected nhưng agent chưa remit
 - **Action accounting** (Doc 16 §3.4):
-  - `Dr cod_clearing P | Cr customer_wallet P` (refund về ví KH)
-  - `agent_cod_receivable` **không thay đổi** → agent vẫn nợ SMP
-  - Khi agent remit: `Dr cash_bank P | Cr agent_cod_receivable P` (SMP thu hồi cash đã ứng refund)
+ - `Dr cod_clearing P | Cr customer_wallet P` (refund về ví KH)
+ - `agent_cod_receivable` **không thay đổi** → agent vẫn nợ SMP
+ - Khi agent remit: `Dr cash_bank P | Cr agent_cod_receivable P` (SMP thu hồi cash đã ứng refund)
 - **Risk control**: Trigger này có exposure (SMP credit ví trước khi cầm cash). Mitigate bằng COD cap (BR-COD-001) + agent whitelist (BR-COD-002).
 
 ### BR-COD-006 · AML threshold cho COD
@@ -711,18 +710,18 @@ Auto-suspend partner nếu:
 ### BR-LOYAL-002 · Confirm points · sau refund window
 - **Trigger**: Cron daily check `now_utc > refund_window_until` + no active refund
 - **Action**:
-  - Status `pending` → `confirmed`
-  - Journal: `Dr marketing_expense L | Cr loyalty_liability L`
+ - Status `pending` → `confirmed`
+ - Journal: `Dr marketing_expense L | Cr loyalty_liability L`
 - **UX**: Notification "Bạn đã nhận N điểm"
 
 ### BR-LOYAL-003 · Clawback / cancel pending points trên refund
 - **Trigger**: `RefundSettled` event (xem [Doc 18](../09-finance/18-event-catalog.md))
 - **If points status = `pending`**:
-  - Cancel pending (no journal — chưa ghi gì)
+ - Cancel pending (no journal — chưa ghi gì)
 - **If points status = `confirmed`** (full refund):
-  - Reverse journal: `Dr loyalty_liability L | Cr marketing_expense L`
-  - Trừ points balance của customer
-  - Notification "Điểm đã bị thu hồi do hoàn đơn"
+ - Reverse journal: `Dr loyalty_liability L | Cr marketing_expense L`
+ - Trừ points balance của customer
+ - Notification "Điểm đã bị thu hồi do hoàn đơn"
 - **If partial refund**: Pro-rata clawback theo tỷ lệ refunded/original
 
 ---
@@ -748,17 +747,17 @@ Auto-suspend partner nếu:
 ### BR-CMPL-003 · Payout hold on complaint
 - **Trigger**: `ComplaintOpened` event với non-trivial category (exclude `goodwill`)
 - **Action**:
-  - Set `agent_payable[order_id]` status = `on_hold`
-  - Payout cron skip these orders
-  - Notify Ops queue cho resolution
+ - Set `agent_payable[order_id]` status = `on_hold`
+ - Payout cron skip these orders
+ - Notify Ops queue cho resolution
 - **Resolution**:
-  - Complaint resolved in favor of agent → unhold, payout resumes
-  - Complaint resolved in favor of customer → refund flow triggers (BR-PAY-REF-*)
+ - Complaint resolved in favor of agent → unhold, payout resumes
+ - Complaint resolved in favor of customer → refund flow triggers (BR-PAY-REF-*)
 - **SLA**: Resolution target ≤ 48h. Beyond → escalate to Ops Manager.
 
 ---
 
-## P · Reconciliation & Fraud Detection Rules (v4.0)
+## P · Reconciliation & Fraud Detection Rules 
 
 > Bộ rules cho automated reconciliation (đối soát) và fraud detection. Daily jobs check inconsistency + flag suspicious patterns.
 
@@ -779,13 +778,13 @@ Auto-suspend partner nếu:
 ### BR-RECON-003 · Daily order-payment reconciliation
 - **Schedule**: Daily 02:30 UTC
 - **Check**:
-  - Orders `status=completed` nhưng `payment_status=pending` > 24h → flag
-  - Payments `status=succeeded` nhưng không có order linked → flag
-  - Refunds requested nhưng không có payment gateway entry → flag
+ - Orders `status=completed` nhưng `payment_status=pending` > 24h → flag
+ - Payments `status=succeeded` nhưng không có order linked → flag
+ - Refunds requested nhưng không có payment gateway entry → flag
 - **Threshold alert**: > 10 outstanding items
 - **Owner**: Finance + Engineering joint review
 
-### BR-RECON-004 · Monthly currency conversion audit (v4.0)
+### BR-RECON-004 · Monthly currency conversion audit 
 - **Schedule**: First day of month, 04:00 UTC
 - **Check**: Every multi-currency transaction trong tháng trước có rate snapshot đúng (rate ngày txn vs rate stored)
 - **Tolerance**: < 0.001% diff (currency conversion precision)
@@ -824,7 +823,7 @@ Auto-suspend partner nếu:
 - **Action**: Review pattern, possible legitimate complaints vs fraud ring
 - **Threshold for action**: > 8 refunds/month → temporary suspend pending investigation
 
-### BR-RECON-005 · Cross-region data consistency (v4.0)
+### BR-RECON-005 · Cross-region data consistency 
 - **Schedule**: Every 6 hours
 - **Check**: Master data (countries, currencies, currency_rates, tax_configs) consistent across all clusters (smp-asia, smp-china, smp-us)
 - **Tolerance**: ZERO drift cho master data
@@ -873,7 +872,7 @@ Auto-suspend partner nếu:
 
 ### BR-MA-003 · Split bps sum = 10000
 - Trong 1 `order_step`, SUM(`order_step_agents.split_bps`) MUST = 10000 (100%)
-- Validation: app-level function `ValidateAgentSplits()` (Doc 04 §1.15.3)
+- Validation: app-level function `ValidateAgentSplits` (Doc 04 §1.15.3)
 - Transition gate: `order_step.status` không thể chuyển sang `completed` nếu sum ≠ 10000
 - Recovery: nếu detect drift trong production → block step + alert Ops
 
@@ -886,20 +885,20 @@ Auto-suspend partner nếu:
 
 ### BR-MA-005 · Earnings calculation per step
 - Khi `order_step.status` → `completed`:
-  1. Compute `step_revenue = order.total × order_step.step_weight_bps / 10000`
-  2. For each agent in step: `amount_earned = step_revenue × agent.split_bps / 10000`
-  3. Lead absorbs residual rounding (Doc 04 §1.15.3 SplitStepRevenue function)
-  4. Post journal entries (Doc 16 §3.5): `Dr revenue_commission | Cr agent_payable[agent_id]` per agent
-  5. Emit event `StepEarningsCalculated` (Doc 18)
+ 1. Compute `step_revenue = order.total × order_step.step_weight_bps / 10000`
+ 2. For each agent in step: `amount_earned = step_revenue × agent.split_bps / 10000`
+ 3. Lead absorbs residual rounding (Doc 04 §1.15.3 SplitStepRevenue function)
+ 4. Post journal entries (Doc 16 §3.5): `Dr revenue_commission | Cr agent_payable[agent_id]` per agent
+ 5. Emit event `StepEarningsCalculated` (Doc 18)
 - Idempotency: nếu retry, check `amount_earned IS NOT NULL` → skip
 - Error: nếu step.status đảo về `in_progress` (revert) → MUST reverse journal entries trước
 
 ### BR-MA-006 · Warranty liability = primary_lead only
 - `orders.primary_lead_agent_id` = lead của step quan trọng nhất (configurable per service, default = step có weight cao nhất)
 - Khi warranty triggered (BR-WARRANTY-002):
-  - Cost recovery TỪ `agent_payable[primary_lead_agent_id]` (theo BR-WARRANTY-004)
-  - Helpers/specialists KHÔNG bị trừ earnings
-  - Helpers KHÔNG ảnh hưởng KPI strike count
+ - Cost recovery TỪ `agent_payable[primary_lead_agent_id]` (theo BR-WARRANTY-004)
+ - Helpers/specialists KHÔNG bị trừ earnings
+ - Helpers KHÔNG ảnh hưởng KPI strike count
 - Exception: nếu warranty cause là **material defect** → vendor liability (không touch agent)
 - Exception: nếu warranty cause là **specialist's specific work fault** (vd electrician lỗi đấu điện) → Ops Manager có thể manual reroute liability sang specialist đó (case-by-case + audit log required)
 - Exception: primary_lead retired → `service_guarantee_reserve` gánh
@@ -952,10 +951,10 @@ Auto-suspend partner nếu:
 
 ### BR-WPKG-004 · Quota check before claim
 - Khi KH yêu cầu claim, system validate:
-  - `customer_warranties.status = 'active'`
-  - `customer_warranties.end_date_utc > NOW()`
-  - `warranty_quota_balance.count_remaining > 0` cho `quota_type` tương ứng
-  - `warranty_quota_balance.next_eligible_at_utc <= NOW()` (per `count_per_period` rule)
+ - `customer_warranties.status = 'active'`
+ - `customer_warranties.end_date_utc > NOW`
+ - `warranty_quota_balance.count_remaining > 0` cho `quota_type` tương ứng
+ - `warranty_quota_balance.next_eligible_at_utc <= NOW` (per `count_per_period` rule)
 - Nếu fail bất kỳ check → reject claim với reason cụ thể
 - Cho `claim_type='repair_basic'`: additional check `issue_category IN warranty_package_covered_issues`
 
@@ -963,9 +962,9 @@ Auto-suspend partner nếu:
 - Repair claim MUST có `issue_category` matching 1 row trong `warranty_package_covered_issues` cho gói đó
 - Nếu issue KHÔNG trong whitelist → reject với suggestion "đặt order trả phí thông thường"
 - Common covered issues:
-  - AC: `capacitor`, `gas_refill_partial`, `fan_motor`, `drainage`, `thermostat`
-  - Washer: `belt_replacement`, `drainage_pump`, `door_seal`
-  - Fridge: `gasket`, `thermostat`, `defrost_heater`
+ - AC: `capacitor`, `gas_refill_partial`, `fan_motor`, `drainage`, `thermostat`
+ - Washer: `belt_replacement`, `drainage_pump`, `door_seal`
+ - Fridge: `gasket`, `thermostat`, `defrost_heater`
 - Non-covered (require paid order): `compressor_replacement`, `coil_replacement`, full unit replacement
 
 ### BR-WPKG-006 · Claim approval flow
@@ -977,7 +976,7 @@ Auto-suspend partner nếu:
 
 ### BR-WPKG-007 · Auto-suggest maintenance scheduling
 - For each active warranty với `auto_suggest=TRUE`:
-  - Cron daily check: nếu `warranty_quota_balance.last_used_at_utc + suggest_interval_days < NOW()` AND quota còn → emit suggestion
+ - Cron daily check: nếu `warranty_quota_balance.last_used_at_utc + suggest_interval_days < NOW` AND quota còn → emit suggestion
 - Notification: "Đã 3 tháng từ lần vệ sinh máy lạnh gần nhất. Đặt lịch ngay?"
 - KH có thể opt-out auto-suggest per gói
 
@@ -992,12 +991,12 @@ Auto-suspend partner nếu:
 - KH KHÔNG bị charge re-service (đã trả tiền gói rồi)
 
 ### BR-WPKG-010 · Expiry handling
-- Cron daily 03:00 UTC: check `customer_warranties WHERE end_date_utc < NOW() AND status='active'`
+- Cron daily 03:00 UTC: check `customer_warranties WHERE end_date_utc < NOW AND status='active'`
 - Action:
-  - Status → `expired`
-  - Notify KH "Gói BH đã hết hạn. Renew?"
-  - Trigger residual revenue recognition (Doc 16 §3.6.6)
-  - Forfeit unused quotas (per terms: không cumulate vào gói mới)
+ - Status → `expired`
+ - Notify KH "Gói BH đã hết hạn. Renew?"
+ - Trigger residual revenue recognition (Doc 16 §3.6.6)
+ - Forfeit unused quotas (per terms: không cumulate vào gói mới)
 
 ### BR-WPKG-011 · Renewal flow
 - 7 ngày trước `end_date_utc` → notify KH renewal option
@@ -1027,277 +1026,277 @@ Auto-suspend partner nếu:
 version: "4.0.0"
 last_updated: "2026-11-01T08:00:00Z"
 maintainers:
-  - "ba-team@smp.vn"
-  - "tech-lead@smp.vn"
+ - "ba-team@smp.vn"
+ - "tech-lead@smp.vn"
 
 # ===========================================================================
 # Context schema · Biến available trong expressions
 # ===========================================================================
 context_schema:
-  country_code:   string    # 'VN', 'US', 'CN', 'TH', 'ID', 'SG', 'MY', 'PH'
-  env:            string    # 'dev', 'staging', 'prod'
-  now:            timestamp # UTC timestamp
-  order:
-    id:               string
-    source:           string  # 'customer_direct', 'partner_customer', 'contract'
-    partner_id:       string|null
-    current_stage:    string
-    country_code:     string
-    currency:         string
-    subtotal_amount:  int64   # minor units
-    total_amount:     int64
-  agent:
-    id:                  int64
-    level:               string  # 'junior', 'mid', 'senior'
-    rating:              float
-    completed_orders:    int
-    skills:              array<string>
-    home_district:       string
-    home_city:           string
-    is_online:           bool
-    status:              string
-  customer:
-    id:                int64
-    is_vip:            bool
-    completed_orders:  int
-  partner:
-    id:                int64|null
-    type:              string|null  # 'A', 'B', 'AB'
-    payment_mode:      string|null  # 'prepaid_wallet', 'post_invoice'
-    wallet_balance:    int64|null
-    payout_mode:       string|null  # 'direct', 'via_partner'
+ country_code: string # 'VN', 'US', 'CN', 'TH', 'ID', 'SG', 'MY', 'PH'
+ env: string # 'dev', 'staging', 'prod'
+ now: timestamp # UTC timestamp
+ order:
+ id: string
+ source: string # 'customer_direct', 'partner_customer', 'contract'
+ partner_id: string|null
+ current_stage: string
+ country_code: string
+ currency: string
+ subtotal_amount: int64 # minor units
+ total_amount: int64
+ agent:
+ id: int64
+ level: string # 'junior', 'mid', 'senior'
+ rating: float
+ completed_orders: int
+ skills: array<string>
+ home_district: string
+ home_city: string
+ is_online: bool
+ status: string
+ customer:
+ id: int64
+ is_vip: bool
+ completed_orders: int
+ partner:
+ id: int64|null
+ type: string|null # 'A', 'B', 'AB'
+ payment_mode: string|null # 'prepaid_wallet', 'post_invoice'
+ wallet_balance: int64|null
+ payout_mode: string|null # 'direct', 'via_partner'
 
 # ===========================================================================
 # A · DISPATCH RULES
 # ===========================================================================
 rules:
 
-  - id: vn.dispatch.001
-    name: "Round timeout · Vietnam"
-    category: dispatch
-    description: "Mỗi dispatch round có timeout 60s production, 30s dev/staging."
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      round_timeout_seconds: 60
-    overrides:
-      - when: "context.env in ['dev', 'staging']"
-        then:
-          round_timeout_seconds: 30
-    legacy_id: "BR-DISP-001"
-    changelog:
-      - { version: "3.0", date: "2026-01-15", author: "BA team", change: "Initial" }
+ - id: vn.dispatch.001
+ name: "Round timeout · Vietnam"
+ category: dispatch
+ description: "Mỗi dispatch round có timeout 60s production, 30s dev/staging."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ round_timeout_seconds: 60
+ overrides:
+ - when: "context.env in ['dev', 'staging']"
+ then:
+ round_timeout_seconds: 30
+ legacy_id: "BR-DISP-001"
+ changelog:
+ - { version: "3.0", date: "2026-01-15", author: "BA team", change: "Initial" }
 
-  - id: us.dispatch.001
-    name: "Round timeout · US"
-    category: dispatch
-    description: "US thợ rải rác, cần 90s. Test nội bộ Q3 2026."
-    enabled: false  # not yet launched
-    priority: 100
-    when: "context.country_code == 'US'"
-    then:
-      round_timeout_seconds: 90
+ - id: us.dispatch.001
+ name: "Round timeout · US"
+ category: dispatch
+ description: "US thợ rải rác, cần 90s. Test nội bộ Q3 2026."
+ enabled: false # not yet launched
+ priority: 100
+ when: "context.country_code == 'US'"
+ then:
+ round_timeout_seconds: 90
 
-  - id: vn.dispatch.002
-    name: "Max rounds"
-    category: dispatch
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      max_rounds: 3
-      escalate_action: "ops_manual_dispatch"
-    legacy_id: "BR-DISP-002"
+ - id: vn.dispatch.002
+ name: "Max rounds"
+ category: dispatch
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ max_rounds: 3
+ escalate_action: "ops_manual_dispatch"
+ legacy_id: "BR-DISP-002"
 
-  - id: vn.dispatch.003
-    name: "Round radius expansion"
-    category: dispatch
-    description: "Round 1: same district. Round 2: +5km. Round 3: full city."
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      radius_per_round:
-        - { round: 1, scope: "same_district" }
-        - { round: 2, scope: "within_km", value: 5 }
-        - { round: 3, scope: "same_city", include_offline: true }
-    legacy_id: "BR-DISP-003"
+ - id: vn.dispatch.003
+ name: "Round radius expansion"
+ category: dispatch
+ description: "Round 1: same district. Round 2: +5km. Round 3: full city."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ radius_per_round:
+ - { round: 1, scope: "same_district" }
+ - { round: 2, scope: "within_km", value: 5 }
+ - { round: 3, scope: "same_city", include_offline: true }
+ legacy_id: "BR-DISP-003"
 
-  - id: "*.dispatch.004"
-    name: "Qualified agent definition"
-    category: dispatch
-    description: "Áp dụng tất cả country. Filter agents qualified."
-    enabled: true
-    priority: 100
-    when: "true"  # always
-    then:
-      qualified_filters:
-        - "agent.status == 'active'"
-        - "agent.is_online == true"
-        - "agent.rating >= 3.5"
-        - "agent.kyc_level in ['basic', 'advanced', 'premium']"
-    legacy_id: "BR-DISP-004"
+ - id: "*.dispatch.004"
+ name: "Qualified agent definition"
+ category: dispatch
+ description: "Áp dụng tất cả country. Filter agents qualified."
+ enabled: true
+ priority: 100
+ when: "true" # always
+ then:
+ qualified_filters:
+ - "agent.status == 'active'"
+ - "agent.is_online == true"
+ - "agent.rating >= 3.5"
+ - "agent.kyc_level in ['basic', 'advanced', 'premium']"
+ legacy_id: "BR-DISP-004"
 
-  - id: vn.dispatch.005
-    name: "Private dispatch · partner-only agents"
-    category: dispatch
-    description: "Order partner-private chỉ gửi thợ thuộc partner đó."
-    enabled: true
-    priority: 200  # higher priority, overrides default
-    when: "context.order.dispatch_visibility == 'private' && context.order.partner_id != null"
-    then:
-      filter_extra: "agent.partner_id == context.order.partner_id"
-      fallback_action: "escalate_to_ops"  # nếu không có agent partner online
-    legacy_id: "BR-DISP-005"
+ - id: vn.dispatch.005
+ name: "Private dispatch · partner-only agents"
+ category: dispatch
+ description: "Order partner-private chỉ gửi thợ thuộc partner đó."
+ enabled: true
+ priority: 200 # higher priority, overrides default
+ when: "context.order.dispatch_visibility == 'private' && context.order.partner_id != null"
+ then:
+ filter_extra: "agent.partner_id == context.order.partner_id"
+ fallback_action: "escalate_to_ops" # nếu không có agent partner online
+ legacy_id: "BR-DISP-005"
 
-  - id: vn.dispatch.007
-    name: "Surge multiplier per round"
-    category: dispatch
-    description: "Round 1 = 1.0x, round 2 = 1.2x, round 3 = 1.5x. Surge chỉ áp dụng labor."
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      surge_multipliers:
-        round_1: 1.00
-        round_2: 1.20
-        round_3: 1.50
-      applies_to: ["labor"]  # not material
-    legacy_id: "BR-DISP-007"
+ - id: vn.dispatch.007
+ name: "Surge multiplier per round"
+ category: dispatch
+ description: "Round 1 = 1.0x, round 2 = 1.2x, round 3 = 1.5x. Surge chỉ áp dụng labor."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ surge_multipliers:
+ round_1: 1.00
+ round_2: 1.20
+ round_3: 1.50
+ applies_to: ["labor"] # not material
+ legacy_id: "BR-DISP-007"
 
 # ===========================================================================
 # B · PRICING RULES
 # ===========================================================================
 
-  - id: vn.pricing.001
-    name: "Labor price multiplier by agent level"
-    category: pricing
-    description: "Junior 0.8x, Mid 1.0x, Senior 1.3x base price."
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      level_multipliers:
-        junior: 0.8
-        mid: 1.0
-        senior: 1.3
-    legacy_id: "BR-PRICE-001"
+ - id: vn.pricing.001
+ name: "Labor price multiplier by agent level"
+ category: pricing
+ description: "Junior 0.8x, Mid 1.0x, Senior 1.3x base price."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ level_multipliers:
+ junior: 0.8
+ mid: 1.0
+ senior: 1.3
+ legacy_id: "BR-PRICE-001"
 
-  - id: vn.pricing.002
-    name: "Material sell price"
-    category: pricing
-    description: "Sell price từ catalog. SMP controlled, không tự ý discount."
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      source: "catalog.material_variants.sell_price_amount"
-    legacy_id: "BR-PRICE-002"
+ - id: vn.pricing.002
+ name: "Material sell price"
+ category: pricing
+ description: "Sell price từ catalog. SMP controlled, không tự ý discount."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ source: "catalog.material_variants.sell_price_amount"
+ legacy_id: "BR-PRICE-002"
 
-  - id: vn.pricing.003
-    name: "Quote subtotal calculation"
-    category: pricing
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      formula: "labor_total + material_total + survey_fee - discount"
-    legacy_id: "BR-PRICE-003"
+ - id: vn.pricing.003
+ name: "Quote subtotal calculation"
+ category: pricing
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ formula: "labor_total + material_total + survey_fee - discount"
+ legacy_id: "BR-PRICE-003"
 
-  - id: vn.pricing.005
-    name: "Voucher discount · pre-VAT"
-    category: pricing
-    description: "Voucher trừ vào subtotal trước khi tính VAT."
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN' && context.order.voucher_code != null"
-    then:
-      apply_order: ["subtotal", "discount", "vat", "total"]
-      discount_cap_percent: 50  # max 50% subtotal
-    legacy_id: "BR-PRICE-005"
+ - id: vn.pricing.005
+ name: "Voucher discount · pre-VAT"
+ category: pricing
+ description: "Voucher trừ vào subtotal trước khi tính VAT."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN' && context.order.voucher_code != null"
+ then:
+ apply_order: ["subtotal", "discount", "vat", "total"]
+ discount_cap_percent: 50 # max 50% subtotal
+ legacy_id: "BR-PRICE-005"
 
-  - id: vn.pricing.006
-    name: "Surge applies to labor only"
-    category: pricing
-    description: "Multiplier surge chỉ nhân vào labor, không nhân material/fee."
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      surge_target: "labor"
-    legacy_id: "BR-PRICE-006"
+ - id: vn.pricing.006
+ name: "Surge applies to labor only"
+ category: pricing
+ description: "Multiplier surge chỉ nhân vào labor, không nhân material/fee."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ surge_target: "labor"
+ legacy_id: "BR-PRICE-006"
 
-  - id: vn.pricing.007
-    name: "VAT Vietnam"
-    category: pricing
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      vat_rate: 0.10
-      vat_name: "VAT"
-      lookup_table: "tax_configs"  # actual rate fetched runtime để support changes
-    legacy_id: "BR-PRICE-008"
+ - id: vn.pricing.007
+ name: "VAT Vietnam"
+ category: pricing
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ vat_rate: 0.10
+ vat_name: "VAT"
+ lookup_table: "tax_configs" # actual rate fetched runtime để support changes
+ legacy_id: "BR-PRICE-008"
 
-  - id: sg.pricing.007
-    name: "GST Singapore"
-    category: pricing
-    enabled: false  # not yet launched
-    priority: 100
-    when: "context.country_code == 'SG'"
-    then:
-      vat_rate: 0.09
-      vat_name: "GST"
+ - id: sg.pricing.007
+ name: "GST Singapore"
+ category: pricing
+ enabled: false # not yet launched
+ priority: 100
+ when: "context.country_code == 'SG'"
+ then:
+ vat_rate: 0.09
+ vat_name: "GST"
 
-  - id: us.pricing.007
-    name: "Sales Tax US · jurisdiction-dependent"
-    category: pricing
-    enabled: false
-    priority: 100
-    when: "context.country_code == 'US'"
-    then:
-      vat_rate_source: "tax_configs"  # query by state/county/city
-      vat_name: "Sales Tax"
+ - id: us.pricing.007
+ name: "Sales Tax US · jurisdiction-dependent"
+ category: pricing
+ enabled: false
+ priority: 100
+ when: "context.country_code == 'US'"
+ then:
+ vat_rate_source: "tax_configs" # query by state/county/city
+ vat_name: "Sales Tax"
 
-  - id: vn.pricing.009
-    name: "Rounding rules · Vietnam"
-    category: pricing
-    description: "VND không decimal. Round to nearest 1000 VND cho display."
-    enabled: true
-    priority: 100
-    when: "context.country_code == 'VN'"
-    then:
-      storage_minor_units: 1     # 1đ = 1 minor unit (no decimal)
-      display_rounding: 1000     # round 47,523 → 47,500
-      display_rounding_mode: "down"
-    legacy_id: "BR-PRICE-009"
+ - id: vn.pricing.009
+ name: "Rounding rules · Vietnam"
+ category: pricing
+ description: "VND không decimal. Round to nearest 1000 VND cho display."
+ enabled: true
+ priority: 100
+ when: "context.country_code == 'VN'"
+ then:
+ storage_minor_units: 1 # 1đ = 1 minor unit (no decimal)
+ display_rounding: 1000 # round 47,523 → 47,500
+ display_rounding_mode: "down"
+ legacy_id: "BR-PRICE-009"
 
-  - id: us.pricing.009
-    name: "Rounding rules · US"
-    category: pricing
-    enabled: false
-    priority: 100
-    when: "context.country_code == 'US'"
-    then:
-      storage_minor_units: 100   # 1 USD = 100 cents
-      display_rounding: 1        # cent precision
-      display_rounding_mode: "nearest"
+ - id: us.pricing.009
+ name: "Rounding rules · US"
+ category: pricing
+ enabled: false
+ priority: 100
+ when: "context.country_code == 'US'"
+ then:
+ storage_minor_units: 100 # 1 USD = 100 cents
+ display_rounding: 1 # cent precision
+ display_rounding_mode: "nearest"
 
-  - id: vn.pricing.010
-    name: "Partner pricing override"
-    category: pricing
-    description: "Partner Type B có thể override labor price (contract negotiated)."
-    enabled: true
-    priority: 200
-    when: |
-      context.partner != null &&
-      context.partner.type in ['B', 'AB'] &&
-      context.partner.has_pricing_override
-    then:
-      use_partner_pricing: true
-      source: "partner.pricing_config"
-    legacy_id: "BR-PRICE-007"
+ - id: vn.pricing.010
+ name: "Partner pricing override"
+ category: pricing
+ description: "Partner Type B có thể override labor price (contract negotiated)."
+ enabled: true
+ priority: 200
+ when: |
+ context.partner != null &&
+ context.partner.type in ['B', 'AB'] &&
+ context.partner.has_pricing_override
+ then:
+ use_partner_pricing: true
+ source: "partner.pricing_config"
+ legacy_id: "BR-PRICE-007"
 ```
 
 ### Đọc + apply rules trong code Go
@@ -1307,34 +1306,34 @@ rules:
 package dispatch
 
 import (
-    "context"
-    "smp/pkg/rules"
+ "context"
+ "smp/pkg/rules"
 )
 
 type RoundController struct {
-    engine *rules.Engine
-    log    *zap.Logger
+ engine *rules.Engine
+ log *zap.Logger
 }
 
 func (r *RoundController) StartRound(ctx context.Context, order Order) error {
-    // Build evaluation context
-    ruleCtx := rules.Context{
-        "country_code": order.CountryCode,
-        "env":          os.Getenv("ENV"),
-        "now":          time.Now().UTC(),
-        "order":        toRuleMap(order),
-    }
+ // Build evaluation context
+ ruleCtx := rules.Context{
+ "country_code": order.CountryCode,
+ "env": os.Getenv("ENV"),
+ "now": time.Now.UTC,
+ "order": toRuleMap(order),
+ }
 
-    // Eval dispatch rules
-    decision := r.engine.Evaluate("dispatch", ruleCtx)
+ // Eval dispatch rules
+ decision := r.engine.Evaluate("dispatch", ruleCtx)
 
-    timeout := decision.GetInt("round_timeout_seconds", 60)  // default 60
-    maxRounds := decision.GetInt("max_rounds", 3)
+ timeout := decision.GetInt("round_timeout_seconds", 60) // default 60
+ maxRounds := decision.GetInt("max_rounds", 3)
 
-    // Use values từ rules engine
-    timer := time.NewTimer(time.Duration(timeout) * time.Second)
-    // ...
-    return nil
+ // Use values từ rules engine
+ timer := time.NewTimer(time.Duration(timeout) * time.Second)
+ // ...
+ return nil
 }
 ```
 
@@ -1343,30 +1342,30 @@ func (r *RoundController) StartRound(ctx context.Context, order Order) error {
 ```yaml
 # tests/rules/dispatch_test.yaml
 test_cases:
-  - name: "VN production · 60s timeout"
-    context:
-      country_code: "VN"
-      env: "prod"
-    expect:
-      round_timeout_seconds: 60
-      max_rounds: 3
+ - name: "VN production · 60s timeout"
+ context:
+ country_code: "VN"
+ env: "prod"
+ expect:
+ round_timeout_seconds: 60
+ max_rounds: 3
 
-  - name: "VN dev · 30s timeout (override)"
-    context:
-      country_code: "VN"
-      env: "dev"
-    expect:
-      round_timeout_seconds: 30
+ - name: "VN dev · 30s timeout (override)"
+ context:
+ country_code: "VN"
+ env: "dev"
+ expect:
+ round_timeout_seconds: 30
 
-  - name: "Private dispatch with partner agents"
-    context:
-      country_code: "VN"
-      env: "prod"
-      order:
-        dispatch_visibility: "private"
-        partner_id: "P001"
-    expect:
-      filter_extra: "agent.partner_id == 'P001'"
+ - name: "Private dispatch with partner agents"
+ context:
+ country_code: "VN"
+ env: "prod"
+ order:
+ dispatch_visibility: "private"
+ partner_id: "P001"
+ expect:
+ filter_extra: "agent.partner_id == 'P001'"
 ```
 
 Run với:

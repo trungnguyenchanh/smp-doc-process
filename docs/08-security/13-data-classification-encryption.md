@@ -1,5 +1,4 @@
 # SMP Data Classification + Encryption Policy
-
 **Audience**: Security, Backend, DevOps, Legal/Compliance · **Updated**: v3.3
 
 ---
@@ -45,7 +44,7 @@
 | Location (realtime) | L3 | Redis (TTL 60s) | |
 | Earnings | L2 | smp_finance | Self-view OK, others RBAC |
 
-### 2.3 Partner data (v3.3)
+### 2.3 Partner data 
 
 | Field | Level | Storage | Notes |
 |---|---|---|---|
@@ -116,23 +115,23 @@ package crypto
 
 // AES-256-GCM with separate key per env
 type FieldCipher struct {
-    aead cipher.AEAD
+ aead cipher.AEAD
 }
 
 func (c *FieldCipher) Encrypt(plaintext string) (string, error) {
-    nonce := make([]byte, c.aead.NonceSize())
-    if _, err := rand.Read(nonce); err != nil { return "", err }
-    ct := c.aead.Seal(nil, nonce, []byte(plaintext), nil)
-    return base64.StdEncoding.EncodeToString(append(nonce, ct...)), nil
+ nonce := make([]byte, c.aead.NonceSize)
+ if _, err := rand.Read(nonce); err != nil { return "", err }
+ ct := c.aead.Seal(nil, nonce, []byte(plaintext), nil)
+ return base64.StdEncoding.EncodeToString(append(nonce, ct...)), nil
 }
 
 func (c *FieldCipher) Decrypt(encoded string) (string, error) {
-    b, err := base64.StdEncoding.DecodeString(encoded)
-    if err != nil { return "", err }
-    if len(b) < c.aead.NonceSize() { return "", errors.New("invalid") }
-    nonce, ct := b[:c.aead.NonceSize()], b[c.aead.NonceSize():]
-    pt, err := c.aead.Open(nil, nonce, ct, nil)
-    return string(pt), err
+ b, err := base64.StdEncoding.DecodeString(encoded)
+ if err != nil { return "", err }
+ if len(b) < c.aead.NonceSize { return "", errors.New("invalid") }
+ nonce, ct := b[:c.aead.NonceSize], b[c.aead.NonceSize:]
+ pt, err := c.aead.Open(nil, nonce, ct, nil)
+ return string(pt), err
 }
 ```
 
@@ -159,23 +158,23 @@ Searchable fields (vd search by CCCD):
 ```text
 secret/smp/<env>/
 ├── service-keys/
-│   ├── jwt-signing-private.pem
-│   ├── jwt-signing-public.pem
-│   └── webhook-signing-secret
+│ ├── jwt-signing-private.pem
+│ ├── jwt-signing-public.pem
+│ └── webhook-signing-secret
 ├── field-encryption-keys/
-│   ├── agent-pii-aes256-v1
-│   ├── partner-pii-aes256-v1
-│   └── field-encryption-salt
+│ ├── agent-pii-aes256-v1
+│ ├── partner-pii-aes256-v1
+│ └── field-encryption-salt
 ├── db-credentials/
-│   ├── mysql-app-password
-│   ├── mysql-readonly-password
-│   ├── mongo-app-password
-│   └── redis-password
+│ ├── mysql-app-password
+│ ├── mysql-readonly-password
+│ ├── mongo-app-password
+│ └── redis-password
 └── external-integrations/
-    ├── inside-api-token
-    ├── wms-api-token
-    ├── sendgrid-api-key
-    └── twilio-auth-token
+ ├── inside-api-token
+ ├── wms-api-token
+ ├── sendgrid-api-key
+ └── twilio-auth-token
 ```
 
 ### 4.2 Key rotation schedule
@@ -221,9 +220,9 @@ Privileged roles (ops_admin với scope `data.pii.view`) có thể click "Reveal
 NEVER log full PII. Mask before logging:
 ```go
 logger.Info("create agent",
-    zap.String("agent_id", agent.ID),
-    zap.String("name_masked", mask.Name(agent.FullName)),
-    zap.String("phone_masked", mask.Phone(agent.Phone)),
+ zap.String("agent_id", agent.ID),
+ zap.String("name_masked", mask.Name(agent.FullName)),
+ zap.String("phone_masked", mask.Phone(agent.Phone)),
 )
 ```
 
@@ -246,7 +245,7 @@ Partners see end-customer data ONLY for their orders:
 
 Enforced at API + DB row-level filtering.
 
-## 5.5 Dynamic Data Masking (v4.0)
+## 5.5 Dynamic Data Masking 
 
 > Implementation pattern cho PII masking ở API Gateway middleware. Default-deny: response chứa masked data, scope unlock specific fields.
 
@@ -278,62 +277,62 @@ Mỗi field type có pattern riêng. Pattern phải:
 package masking
 
 import (
-    "encoding/json"
-    "net/http"
-    "regexp"
-    "strings"
+ "encoding/json"
+ "net/http"
+ "regexp"
+ "strings"
 )
 
 // Tag-based masking config
 // Usage: tag struct field với mask info
 type Customer struct {
-    ID       string `json:"id"`
-    Name     string `json:"name"      mask:"name,scope=pii.unmask.name"`
-    Phone    string `json:"phone"     mask:"phone,scope=pii.unmask.phone"`
-    Email    string `json:"email"     mask:"email,scope=pii.unmask.email"`
-    CCCD     string `json:"cccd"      mask:"cccd,scope=pii.unmask.cccd"`
-    BankAcc  string `json:"bank_acc"  mask:"bank,scope=pii.unmask.bank_account"`
-    Address  string `json:"address"   mask:"address,scope=pii.unmask.address_full"`
+ ID string `json:"id"`
+ Name string `json:"name" mask:"name,scope=pii.unmask.name"`
+ Phone string `json:"phone" mask:"phone,scope=pii.unmask.phone"`
+ Email string `json:"email" mask:"email,scope=pii.unmask.email"`
+ CCCD string `json:"cccd" mask:"cccd,scope=pii.unmask.cccd"`
+ BankAcc string `json:"bank_acc" mask:"bank,scope=pii.unmask.bank_account"`
+ Address string `json:"address" mask:"address,scope=pii.unmask.address_full"`
 }
 
 // Middleware applied AFTER service returns response, BEFORE serialize
 func MaskingMiddleware(next http.Handler) http.Handler {
-    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-        // Wrap ResponseWriter to capture
-        rec := newResponseRecorder(w)
-        next.ServeHTTP(rec, r)
+ return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+ // Wrap ResponseWriter to capture
+ rec := newResponseRecorder(w)
+ next.ServeHTTP(rec, r)
 
-        // Parse response if JSON
-        if !strings.Contains(rec.Header().Get("Content-Type"), "application/json") {
-            rec.Flush()
-            return
-        }
+ // Parse response if JSON
+ if !strings.Contains(rec.Header.Get("Content-Type"), "application/json") {
+ rec.Flush
+ return
+ }
 
-        scopes := scopesFromContext(r.Context())
-        var body interface{}
-        if err := json.Unmarshal(rec.body, &body); err != nil {
-            rec.Flush()
-            return
-        }
+ scopes := scopesFromContext(r.Context)
+ var body interface{}
+ if err := json.Unmarshal(rec.body, &body); err != nil {
+ rec.Flush
+ return
+ }
 
-        // Walk tree, apply masking based on struct tags
-        masked := applyMasking(body, scopes)
+ // Walk tree, apply masking based on struct tags
+ masked := applyMasking(body, scopes)
 
-        // Audit each unmasked field access
-        if rec.metadata.UnmaskedFields != nil {
-            audit.LogPIIAccess(r.Context(), audit.PIIAccess{
-                ActorID:    userFromContext(r.Context()),
-                Fields:     rec.metadata.UnmaskedFields,
-                Subject:    rec.metadata.Subject,
-                RequestID:  requestIDFromContext(r.Context()),
-            })
-        }
+ // Audit each unmasked field access
+ if rec.metadata.UnmaskedFields != nil {
+ audit.LogPIIAccess(r.Context, audit.PIIAccess{
+ ActorID: userFromContext(r.Context),
+ Fields: rec.metadata.UnmaskedFields,
+ Subject: rec.metadata.Subject,
+ RequestID: requestIDFromContext(r.Context),
+ })
+ }
 
-        out, _ := json.Marshal(masked)
-        w.Header().Set("Content-Type", "application/json")
-        w.WriteHeader(rec.statusCode)
-        w.Write(out)
-    })
+ out, _ := json.Marshal(masked)
+ w.Header.Set("Content-Type", "application/json")
+ w.WriteHeader(rec.statusCode)
+ w.Write(out)
+ })
 }
 ```
 
@@ -343,49 +342,49 @@ func MaskingMiddleware(next http.Handler) http.Handler {
 // pkg/masking/maskers.go
 
 var maskers = map[string]MaskerFunc{
-    "phone":   maskPhone,
-    "email":   maskEmail,
-    "cccd":    maskCCCD,
-    "bank":    maskBank,
-    "name":    maskName,
-    "address": maskAddress,
+ "phone": maskPhone,
+ "email": maskEmail,
+ "cccd": maskCCCD,
+ "bank": maskBank,
+ "name": maskName,
+ "address": maskAddress,
 }
 
 type MaskerFunc func(plain string) string
 
 func maskPhone(plain string) string {
-    // Normalize first
-    digits := digitsOnly(plain)
-    if len(digits) < 7 { return "***" }
-    
-    // Vietnam phone format
-    if strings.HasPrefix(plain, "+84") || strings.HasPrefix(plain, "0") {
-        // Show first 3 (0912 or +84) + last 3
-        return digits[:3] + strings.Repeat("*", len(digits)-6) + digits[len(digits)-3:]
-    }
-    // International: first 4 + last 3
-    return plain[:4] + strings.Repeat("*", len(plain)-7) + plain[len(plain)-3:]
+ // Normalize first
+ digits := digitsOnly(plain)
+ if len(digits) < 7 { return "***" }
+ 
+ // Vietnam phone format
+ if strings.HasPrefix(plain, "+84") || strings.HasPrefix(plain, "0") {
+ // Show first 3 (0912 or +84) + last 3
+ return digits[:3] + strings.Repeat("*", len(digits)-6) + digits[len(digits)-3:]
+ }
+ // International: first 4 + last 3
+ return plain[:4] + strings.Repeat("*", len(plain)-7) + plain[len(plain)-3:]
 }
 
 func maskEmail(plain string) string {
-    parts := strings.SplitN(plain, "@", 2)
-    if len(parts) != 2 { return "***@***" }
-    local := parts[0]
-    if len(local) <= 3 {
-        return strings.Repeat("*", len(local)) + "@" + parts[1]
-    }
-    return local[:3] + strings.Repeat("*", len(local)-3) + "@" + parts[1]
+ parts := strings.SplitN(plain, "@", 2)
+ if len(parts) != 2 { return "***@***" }
+ local := parts[0]
+ if len(local) <= 3 {
+ return strings.Repeat("*", len(local)) + "@" + parts[1]
+ }
+ return local[:3] + strings.Repeat("*", len(local)-3) + "@" + parts[1]
 }
 
 func maskCCCD(plain string) string {
-    digits := digitsOnly(plain)
-    if len(digits) != 12 { return "************" }
-    return digits[:4] + "****" + digits[8:]
+ digits := digitsOnly(plain)
+ if len(digits) != 12 { return "************" }
+ return digits[:4] + "****" + digits[8:]
 }
 
 func maskBank(plain string) string {
-    if len(plain) < 8 { return "********" }
-    return plain[:4] + strings.Repeat("*", len(plain)-8) + plain[len(plain)-4:]
+ if len(plain) < 8 { return "********" }
+ return plain[:4] + strings.Repeat("*", len(plain)-8) + plain[len(plain)-4:]
 }
 ```
 
@@ -396,26 +395,26 @@ func maskBank(plain string) string {
 ```go
 // Trong handler
 func (h *Handler) GetCustomer(c *gin.Context) {
-    customer := h.repo.Get(c.Param("id"))
-    
-    // Default behavior: middleware masks based on scope
-    c.JSON(200, customer)
+ customer := h.repo.Get(c.Param("id"))
+ 
+ // Default behavior: middleware masks based on scope
+ c.JSON(200, customer)
 }
 
 // Special case: financial reconciliation cron — bypass masking
 func (h *Handler) RunReconciliation(ctx context.Context) {
-    customers := h.repo.ListAll()
-    
-    // Mark context to skip masking
-    ctx = masking.SkipMaskingContext(ctx, "reason:reconciliation_job")
-    
-    // Audit log records skip with reason
-    audit.LogMaskSkip(ctx, customers)
-    
-    // Process with full data
-    for _, c := range customers {
-        h.reconcile(c.BankAccount, ...)
-    }
+ customers := h.repo.ListAll
+ 
+ // Mark context to skip masking
+ ctx = masking.SkipMaskingContext(ctx, "reason:reconciliation_job")
+ 
+ // Audit log records skip with reason
+ audit.LogMaskSkip(ctx, customers)
+ 
+ // Process with full data
+ for _, c := range customers {
+ h.reconcile(c.BankAccount, ...)
+ }
 }
 ```
 
@@ -425,19 +424,19 @@ func (h *Handler) RunReconciliation(ctx context.Context) {
 Is the field used for:
 │
 ├─ Display only to certain roles?
-│   └─► MASKING (reversible, server-side based on scope)
+│ └─► MASKING (reversible, server-side based on scope)
 │
 ├─ PCI-DSS compliance (credit card)?
-│   └─► TOKENIZATION (vault lookup, no plaintext in app DB)
+│ └─► TOKENIZATION (vault lookup, no plaintext in app DB)
 │
 ├─ Search by exact value (vd lookup by phone)?
-│   └─► HASHED INDEX + MASKED VALUE (hash for lookup, masked for display)
+│ └─► HASHED INDEX + MASKED VALUE (hash for lookup, masked for display)
 │
 ├─ Aggregation (count, sum)?
-│   └─► No masking needed (no PII exposed)
+│ └─► No masking needed (no PII exposed)
 │
 └─ Used in expression (vd CCCD as login)?
-    └─► HASHED with pepper (one-way, store hash only)
+ └─► HASHED with pepper (one-way, store hash only)
 ```
 
 ### 5.5.6 Performance considerations
@@ -453,10 +452,10 @@ Mỗi country có rules riêng:
 
 ```go
 var countryMaskingProfile = map[string]Profile{
-    "VN": {PhoneRule: "vn_format", IDField: "cccd", IDLength: 12},
-    "US": {PhoneRule: "intl_format", IDField: "ssn", IDLength: 9},
-    "CN": {PhoneRule: "intl_format", IDField: "id_card_cn", IDLength: 18},
-    "SG": {PhoneRule: "intl_format", IDField: "nric", IDLength: 9},
+ "VN": {PhoneRule: "vn_format", IDField: "cccd", IDLength: 12},
+ "US": {PhoneRule: "intl_format", IDField: "ssn", IDLength: 9},
+ "CN": {PhoneRule: "intl_format", IDField: "id_card_cn", IDLength: 18},
+ "SG": {PhoneRule: "intl_format", IDField: "nric", IDLength: 9},
 }
 ```
 
@@ -485,11 +484,11 @@ User-requested deletion (PDPL Article 10):
 2. Mark account `deletion_pending` (30-day grace period for rollback)
 3. Audit log: `dsr.deletion_marked` (see [Doc 12 section 11.5](./12-audit-log-spec.md#115-dsr-data-subject-request-lifecycle-events-v35))
 4. After 30 days, automated process:
-   - PII fields → anonymized (vd `Nguyễn Văn A` → `deleted_user_<uuid>`)
-   - Order history retained (anonymized customer_id)
-   - Audit logs retained (PII anonymized in actor_name, audit_id preserved)
-   - Photos: customer-uploaded deleted, agent-uploaded retained anonymized
-   - Bank accounts deleted
+ - PII fields → anonymized (vd `Nguyễn Văn A` → `deleted_user_<uuid>`)
+ - Order history retained (anonymized customer_id)
+ - Audit logs retained (PII anonymized in actor_name, audit_id preserved)
+ - Photos: customer-uploaded deleted, agent-uploaded retained anonymized
+ - Bank accounts deleted
 5. Audit log: `dsr.deletion_executed`
 6. Notify user via email if reachable
 
@@ -532,7 +531,7 @@ Khi event sau xảy ra, data **không bị xóa** dù hết hạn retention defa
 | Court order / regulatory request | Hold theo time frame specified | `dsr.legal_hold_applied` |
 | Tax authority audit | Hold đến audit closed | `dsr.legal_hold_applied` |
 
-Implementation: column `legal_hold_until DATETIME` trên các tables critical. Retention cron job check `legal_hold_until IS NULL OR legal_hold_until < NOW()` trước khi xóa.
+Implementation: column `legal_hold_until DATETIME` trên các tables critical. Retention cron job check `legal_hold_until IS NULL OR legal_hold_until < NOW` trước khi xóa.
 
 ### 6.7 System-driven retention expiry
 
@@ -540,17 +539,17 @@ Cron job `retention-enforcer` chạy daily 03:00 UTC:
 
 ```text
 For each table với retention policy:
-  1. SELECT records WHERE
-     created_at < retention_threshold
-     AND legal_hold_until IS NULL
-     AND no_active_dispute_link
-  2. For each batch:
-     - Anonymize PII fields (per data class rules)
-     - Move to cold storage (S3 Glacier) if applicable
-     - Audit: data.retention_anonymized
-  3. After grace (30 days post-anonymization):
-     - Hard delete
-     - Audit: data.retention_deleted
+ 1. SELECT records WHERE
+ created_at < retention_threshold
+ AND legal_hold_until IS NULL
+ AND no_active_dispute_link
+ 2. For each batch:
+ - Anonymize PII fields (per data class rules)
+ - Move to cold storage (S3 Glacier) if applicable
+ - Audit: data.retention_anonymized
+ 3. After grace (30 days post-anonymization):
+ - Hard delete
+ - Audit: data.retention_deleted
 ```
 
 Examples:
@@ -613,7 +612,7 @@ If we ever need to take cards directly (future), follow PCI DSS Level 4 minimum.
 
 ---
 
-## 8.5 Multi-jurisdiction compliance (v4.0)
+## 8.5 Multi-jurisdiction compliance 
 
 > Khi expand global, mỗi country/region có luật riêng. Bảng so sánh + checklist mapping per region.
 
@@ -664,9 +663,9 @@ If we ever need to take cards directly (future), follow PCI DSS Level 4 minimum.
 #### PIPL (China)
 - **Critical**: data of CN citizens MUST stored in CN
 - Cross-border export requires **CAC (Cyberspace Administration of China) security assessment** if:
-  - Transferring sensitive PII
-  - Processing > 1M CN individuals' data
-  - Critical Information Infrastructure Operator (CIIO)
+ - Transferring sensitive PII
+ - Processing > 1M CN individuals' data
+ - Critical Information Infrastructure Operator (CIIO)
 - Consent must be "separate consent" for sensitive data (not bundled)
 - Local DPO + local representative required
 - Audit logs accessible to authorities upon request
@@ -694,27 +693,27 @@ Mỗi region phải có DPO + DPA contact:
 ```yaml
 # config/dpo-contacts.yaml
 dpo_contacts:
-  VN:
-    dpo_name: "Nguyễn Văn DPO"
-    email: "dpo.vn@smp.vn"
-    address: "HCMC, Vietnam"
-    dpa: "Cục An toàn thông tin - Bộ TT&TT"
-  EU:
-    dpo_name: "TBD when launch"
-    representative: "TBD"
-    email: "dpo.eu@smp.vn"
-    dpa_per_country:
-      DE: "BfDI (Bundesbeauftragte für den Datenschutz)"
-      FR: "CNIL"
-  US-CA:
-    privacy_officer: "TBD"
-    email: "privacy.us@smp.vn"
-    agency: "California Privacy Protection Agency (CPPA)"
-  CN:
-    dpo_name: "TBD when launch"
-    local_rep: "TBD"
-    email: "dpo.cn@smp.cn"
-    authority: "CAC (Cyberspace Administration of China)"
+ VN:
+ dpo_name: "Nguyễn Văn DPO"
+ email: "dpo.vn@smp.vn"
+ address: "HCMC, Vietnam"
+ dpa: "Cục An toàn thông tin - Bộ TT&TT"
+ EU:
+ dpo_name: "TBD when launch"
+ representative: "TBD"
+ email: "dpo.eu@smp.vn"
+ dpa_per_country:
+ DE: "BfDI (Bundesbeauftragte für den Datenschutz)"
+ FR: "CNIL"
+ US-CA:
+ privacy_officer: "TBD"
+ email: "privacy.us@smp.vn"
+ agency: "California Privacy Protection Agency (CPPA)"
+ CN:
+ dpo_name: "TBD when launch"
+ local_rep: "TBD"
+ email: "dpo.cn@smp.cn"
+ authority: "CAC (Cyberspace Administration of China)"
 ```
 
 ### 8.5.5 Compliance review cadence
@@ -755,10 +754,10 @@ If suspected PII leak:
 3. **4-24h**: notify internal stakeholders (legal, exec)
 4. **24-72h** (PDPA): notify Ministry of Information & Communications if "significant risk"
 5. **Within 72h**: notify affected users with:
-   - What data was exposed
-   - When and how
-   - What we're doing
-   - What they should do
+ - What data was exposed
+ - When and how
+ - What we're doing
+ - What they should do
 6. **Post**: post-mortem, regulatory cooperation, customer support
 
 Maintain `incident-response-plan.md` separate doc with detailed playbook.

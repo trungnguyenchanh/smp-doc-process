@@ -29,16 +29,16 @@ Audit log ghi nhận **mọi hành động có ảnh hưởng** đến data, tà
 | **Data access (sensitive)** | pii_view, financial_data_export, audit_log_query | ✅ |
 | **System** | config_change, feature_flag_toggle, deploy_event | ✅ |
 | **Security** | failed_login (5+), suspicious_access, ip_whitelist_change | ✅ |
-| **PII Access (v4.0)** | pii.unmask, pii.bulk_export, pii.search | ✅ critical |
-| **Compliance (v4.0)** | dsr.export_request, dsr.deletion_request, consent.update, breach.notify | ✅ critical |
-| **Rules Engine (v4.0)** | rules.config_apply, rules.reload, rules.evaluation_anomaly | ✅ |
+| **PII Access ** | pii.unmask, pii.bulk_export, pii.search | ✅ critical |
+| **Compliance ** | dsr.export_request, dsr.deletion_request, consent.update, breach.notify | ✅ critical |
+| **Rules Engine ** | rules.config_apply, rules.reload, rules.evaluation_anomaly | ✅ |
 
 **KHÔNG audit**:
 - Read endpoints thông thường (vd `GET /orders`) — quá nhiều, dùng access log thay
 - Dispatch state changes tự động (vd round_1_expired) — có order_stage_log riêng
 - Cache misses, internal retries
 
-### Cross-cutting · PII access events (v4.0)
+### Cross-cutting · PII access events 
 
 Đây là **category quan trọng nhất** từ compliance perspective. Mọi lần PII được unmask MUST có audit entry.
 
@@ -58,31 +58,31 @@ Audit log ghi nhận **mọi hành động có ảnh hưởng** đến data, tà
 
 ```javascript
 {
-  // Standard audit fields (xem section 3)
-  audit_id: "aud_01HX...",
-  timestamp_utc: ISODate,
-  actor_id: "user_123",
-  actor_country: "VN",
-  
-  // PII-specific
-  action: "pii.unmask.viewed",
-  data_subject_type: "customer | agent | partner_admin",
-  data_subject_id: "cus_01HX2M",
-  data_subject_country: "VN",
-  fields_unmasked: ["phone", "address_full"],  // chính xác field nào
-  unmask_session_id: "ums_01H..." (nếu qua /pii/unmask),
-  reason: "Customer called for support, ticket ZD-1234"  (required cho sensitive fields),
-  
-  // Context
-  scope_used: ["pii.unmask.phone"],
-  ip_address: "...",
-  user_agent: "...",
-  ticket_id: "ZD-1234" (nếu có),
-  request_id: "req_..."
+ // Standard audit fields (xem section 3)
+ audit_id: "aud_01HX...",
+ timestamp_utc: ISODate,
+ actor_id: "user_123",
+ actor_country: "VN",
+ 
+ // PII-specific
+ action: "pii.unmask.viewed",
+ data_subject_type: "customer | agent | partner_admin",
+ data_subject_id: "cus_01HX2M",
+ data_subject_country: "VN",
+ fields_unmasked: ["phone", "address_full"], // chính xác field nào
+ unmask_session_id: "ums_01H..." (nếu qua /pii/unmask),
+ reason: "Customer called for support, ticket ZD-1234" (required cho sensitive fields),
+ 
+ // Context
+ scope_used: ["pii.unmask.phone"],
+ ip_address: "...",
+ user_agent: "...",
+ ticket_id: "ZD-1234" (nếu có),
+ request_id: "req_..."
 }
 ```
 
-### Cross-cutting · Compliance events (v4.0)
+### Cross-cutting · Compliance events 
 
 #### Data Subject Rights (DSR)
 
@@ -113,7 +113,7 @@ Audit log ghi nhận **mọi hành động có ảnh hưởng** đến data, tà
 | `breach.notified.users` | Notified affected users | 72h cho high-risk |
 | `breach.resolved` | Containment + remediation done | tracking |
 
-### Cross-cutting · Rules Engine events (v4.0)
+### Cross-cutting · Rules Engine events 
 
 | action | Trigger |
 |---|---|
@@ -128,44 +128,44 @@ Audit log ghi nhận **mọi hành động có ảnh hưởng** đến data, tà
 
 ```javascript
 {
-  // Identification
-  _id: ObjectId,
-  audit_id: "aud_01HX7K2M9QWRA1B2",        // ULID
-  timestamp: ISODate("2026-05-27T08:14:32.123Z"),
-  schema_version: "1.0",
-  
-  // Actor (who did it)
-  actor_type: "user" | "system" | "partner_api" | "external_webhook",
-  actor_id: "usr_01HX7K2M" | "system" | "ptn_01HX",
-  actor_role: "ops_admin" | "partner_owner" | "customer" | "technician" | null,
-  actor_name: "Nguyễn Hùng",
-  actor_ip: "210.245.32.18",
-  user_agent: "Mozilla/5.0 ...",
-  
-  // Action
-  action: "agent.kyc.approve",                // <category>.<resource>.<verb>
-  action_category: "agent",
-  outcome: "success" | "failure" | "denied",
-  
-  // Resource (what was acted upon)
-  resource_type: "agent" | "order" | "partner" | ...,
-  resource_id: "agt_T4K9",
-  resource_name: "Trương Minh K.",
-  
-  // Change details
-  before: { ... },       // state before
-  after: { ... },        // state after
-  changes: ["kyc_level: pending → full", "verified_by: → usr_01HX"],
-  
-  // Context
-  request_id: "req_01HX7K",                   // correlate with access log
-  session_id: "ses_01HX",
-  partner_id: "ptn_hung_acservice",           // if relevant
-  notes: "Approved after manual review",
-  
-  // Compliance flags
-  contains_pii: true | false,
-  legal_basis: "consent" | "contract" | "legitimate_interest" | "legal_obligation"
+ // Identification
+ _id: ObjectId,
+ audit_id: "aud_01HX7K2M9QWRA1B2", // ULID
+ timestamp: ISODate("2026-05-27T08:14:32.123Z"),
+ schema_version: "1.0",
+ 
+ // Actor (who did it)
+ actor_type: "user" | "system" | "partner_api" | "external_webhook",
+ actor_id: "usr_01HX7K2M" | "system" | "ptn_01HX",
+ actor_role: "ops_admin" | "partner_owner" | "customer" | "technician" | null,
+ actor_name: "Nguyễn Hùng",
+ actor_ip: "210.245.32.18",
+ user_agent: "Mozilla/5.0 ...",
+ 
+ // Action
+ action: "agent.kyc.approve", // <category>.<resource>.<verb>
+ action_category: "agent",
+ outcome: "success" | "failure" | "denied",
+ 
+ // Resource (what was acted upon)
+ resource_type: "agent" | "order" | "partner" | ...,
+ resource_id: "agt_T4K9",
+ resource_name: "Trương Minh K.",
+ 
+ // Change details
+ before: { ... }, // state before
+ after: { ... }, // state after
+ changes: ["kyc_level: pending → full", "verified_by: → usr_01HX"],
+ 
+ // Context
+ request_id: "req_01HX7K", // correlate with access log
+ session_id: "ses_01HX",
+ partner_id: "ptn_hung_acservice", // if relevant
+ notes: "Approved after manual review",
+ 
+ // Compliance flags
+ contains_pii: true | false,
+ legal_basis: "consent" | "contract" | "legitimate_interest" | "legal_obligation"
 }
 ```
 
@@ -252,87 +252,87 @@ Optional per category:
 ### Example 1: Ops approves agent KYC
 ```json
 {
-  "audit_id": "aud_01HX7K2M",
-  "timestamp": "2026-05-27T08:14:32.123Z",
-  "schema_version": "1.0",
-  "actor_type": "user",
-  "actor_id": "usr_ops_001",
-  "actor_role": "ops_admin",
-  "actor_name": "Lê Quỳnh Mai",
-  "actor_ip": "210.245.32.18",
-  "action": "agent.agent.kyc.approved",
-  "action_category": "agent",
-  "outcome": "success",
-  "resource_type": "agent",
-  "resource_id": "agt_T4K9",
-  "resource_name": "Trương Minh K.",
-  "before": { "kyc_level": "pending", "verified_by": null },
-  "after":  { "kyc_level": "full",    "verified_by": "usr_ops_001" },
-  "changes": ["kyc_level: pending → full"],
-  "request_id": "req_01HX7K",
-  "notes": "All docs verified manually"
+ "audit_id": "aud_01HX7K2M",
+ "timestamp": "2026-05-27T08:14:32.123Z",
+ "schema_version": "1.0",
+ "actor_type": "user",
+ "actor_id": "usr_ops_001",
+ "actor_role": "ops_admin",
+ "actor_name": "Lê Quỳnh Mai",
+ "actor_ip": "210.245.32.18",
+ "action": "agent.agent.kyc.approved",
+ "action_category": "agent",
+ "outcome": "success",
+ "resource_type": "agent",
+ "resource_id": "agt_T4K9",
+ "resource_name": "Trương Minh K.",
+ "before": { "kyc_level": "pending", "verified_by": null },
+ "after": { "kyc_level": "full", "verified_by": "usr_ops_001" },
+ "changes": ["kyc_level: pending → full"],
+ "request_id": "req_01HX7K",
+ "notes": "All docs verified manually"
 }
 ```
 
 ### Example 2: Partner Owner change config
 ```json
 {
-  "audit_id": "aud_01HX7K2N",
-  "timestamp": "2026-05-27T09:00:01.456Z",
-  "actor_type": "user",
-  "actor_id": "usr_partner_hung",
-  "actor_role": "partner_owner",
-  "actor_name": "Nguyễn Hùng",
-  "actor_ip": "118.69.x.x",
-  "action": "partner.partner.config.updated",
-  "outcome": "success",
-  "resource_type": "partner",
-  "resource_id": "ptn_hung_acservice",
-  "partner_id": "ptn_hung_acservice",
-  "before": { "default_dispatch_visibility": "open" },
-  "after":  { "default_dispatch_visibility": "private" },
-  "changes": ["default_dispatch_visibility: open → private"],
-  "request_id": "req_01HX9P"
+ "audit_id": "aud_01HX7K2N",
+ "timestamp": "2026-05-27T09:00:01.456Z",
+ "actor_type": "user",
+ "actor_id": "usr_partner_hung",
+ "actor_role": "partner_owner",
+ "actor_name": "Nguyễn Hùng",
+ "actor_ip": "118.69.x.x",
+ "action": "partner.partner.config.updated",
+ "outcome": "success",
+ "resource_type": "partner",
+ "resource_id": "ptn_hung_acservice",
+ "partner_id": "ptn_hung_acservice",
+ "before": { "default_dispatch_visibility": "open" },
+ "after": { "default_dispatch_visibility": "private" },
+ "changes": ["default_dispatch_visibility: open → private"],
+ "request_id": "req_01HX9P"
 }
 ```
 
 ### Example 3: Failed login (security)
 ```json
 {
-  "audit_id": "aud_01HX7K2O",
-  "timestamp": "2026-05-27T09:15:22.789Z",
-  "actor_type": "user",
-  "actor_id": "usr_partner_finance_002",
-  "actor_name": "(login attempt)",
-  "actor_ip": "203.205.x.x",
-  "action": "auth.user.login.failed",
-  "outcome": "failure",
-  "resource_type": "user",
-  "resource_id": "usr_partner_finance_002",
-  "notes": "Wrong password, attempt 3/5"
+ "audit_id": "aud_01HX7K2O",
+ "timestamp": "2026-05-27T09:15:22.789Z",
+ "actor_type": "user",
+ "actor_id": "usr_partner_finance_002",
+ "actor_name": "(login attempt)",
+ "actor_ip": "203.205.x.x",
+ "action": "auth.user.login.failed",
+ "outcome": "failure",
+ "resource_type": "user",
+ "resource_id": "usr_partner_finance_002",
+ "notes": "Wrong password, attempt 3/5"
 }
 ```
 
 ### Example 4: System trigger payout
 ```json
 {
-  "audit_id": "aud_01HX7K2P",
-  "timestamp": "2026-05-27T23:59:59.000Z",
-  "actor_type": "system",
-  "actor_id": "cronjob:payout-monthly",
-  "actor_name": "system",
-  "actor_ip": "10.0.x.x",
-  "action": "finance.payout.created",
-  "outcome": "success",
-  "resource_type": "payout",
-  "resource_id": "pyt_01HX7K2P",
-  "partner_id": "ptn_hung_acservice",
-  "after": {
-    "amount": 4500000,
-    "period_start": "2026-05-01",
-    "period_end": "2026-05-31",
-    "orders_count": 23
-  }
+ "audit_id": "aud_01HX7K2P",
+ "timestamp": "2026-05-27T23:59:59.000Z",
+ "actor_type": "system",
+ "actor_id": "cronjob:payout-monthly",
+ "actor_name": "system",
+ "actor_ip": "10.0.x.x",
+ "action": "finance.payout.created",
+ "outcome": "success",
+ "resource_type": "payout",
+ "resource_id": "pyt_01HX7K2P",
+ "partner_id": "ptn_hung_acservice",
+ "after": {
+ "amount": 4500000,
+ "period_start": "2026-05-01",
+ "period_end": "2026-05-31",
+ "orders_count": 23
+ }
 }
 ```
 
@@ -344,50 +344,50 @@ Optional per category:
 package audit
 
 type Event struct {
-    AuditID      string
-    Timestamp    time.Time
-    ActorType    string
-    ActorID      string
-    ActorRole    string
-    ActorIP      string
-    Action       string
-    Outcome      string
-    ResourceType string
-    ResourceID   string
-    Before       interface{}
-    After        interface{}
-    RequestID    string
-    Notes        string
+ AuditID string
+ Timestamp time.Time
+ ActorType string
+ ActorID string
+ ActorRole string
+ ActorIP string
+ Action string
+ Outcome string
+ ResourceType string
+ ResourceID string
+ Before interface{}
+ After interface{}
+ RequestID string
+ Notes string
 }
 
 type Logger interface {
-    Log(ctx context.Context, e Event) error
+ Log(ctx context.Context, e Event) error
 }
 
 // Usage in service layer
 func (s *AgentService) ApproveKYC(ctx context.Context, agentID string) error {
-    agent, err := s.repo.Get(ctx, agentID)
-    if err != nil { return err }
-    
-    before := agent.Snapshot()
-    
-    agent.KYCLevel = "full"
-    agent.VerifiedBy = auth.UserIDFromCtx(ctx)
-    
-    if err := s.repo.Save(ctx, agent); err != nil {
-        return err
-    }
-    
-    s.audit.Log(ctx, audit.Event{
-        Action:       "agent.agent.kyc.approved",
-        Outcome:      "success",
-        ResourceType: "agent",
-        ResourceID:   agentID,
-        Before:       before,
-        After:        agent.Snapshot(),
-    })
-    
-    return nil
+ agent, err := s.repo.Get(ctx, agentID)
+ if err != nil { return err }
+ 
+ before := agent.Snapshot
+ 
+ agent.KYCLevel = "full"
+ agent.VerifiedBy = auth.UserIDFromCtx(ctx)
+ 
+ if err := s.repo.Save(ctx, agent); err != nil {
+ return err
+ }
+ 
+ s.audit.Log(ctx, audit.Event{
+ Action: "agent.agent.kyc.approved",
+ Outcome: "success",
+ ResourceType: "agent",
+ ResourceID: agentID,
+ Before: before,
+ After: agent.Snapshot,
+ })
+ 
+ return nil
 }
 ```
 
@@ -491,9 +491,9 @@ Each audit entry includes hash of previous entry → tamper detection:
 
 ```javascript
 {
-  audit_id: "aud_X",
-  prev_hash: "sha256:abc...",     // hash của entry trước
-  row_hash:  "sha256:def..."      // sha256(prev_hash || canonical_payload)
+ audit_id: "aud_X",
+ prev_hash: "sha256:abc...", // hash của entry trước
+ row_hash: "sha256:def..." // sha256(prev_hash || canonical_payload)
 }
 ```
 
@@ -529,7 +529,7 @@ When customer requests data deletion (PDPL right to erasure):
 - DO anonymize PII fields: `actor_name` → "deleted_user_XXX"
 - Keep audit_id, action, timestamp (operational integrity)
 
-## 11.5 DSR (Data Subject Request) Lifecycle Events (v3.5+)
+## 11.5 DSR (Data Subject Request) Lifecycle Events 
 
 > Theo [Doc 21 · PDPL Data Policy](./13-data-classification-encryption.md cross-link → 10-legal/21-pdpl-data-policy.md), KH/thợ có quyền truy cập, xóa, chỉnh sửa dữ liệu cá nhân. Mọi bước trong lifecycle MUST có audit trail.
 
@@ -554,41 +554,41 @@ When customer requests data deletion (PDPL right to erasure):
 
 ```javascript
 {
-  "audit_id": "aud_01HX8K...",
-  "action": "dsr.access_export_started",
-  "category": "compliance",
-  "severity": "notice",
-  
-  // Subject (whose data)
-  "subject_type": "customer" | "agent" | "partner",
-  "subject_id": "cust_12345",
-  "subject_country": "VN",  // ← determines applicable law
-  
-  // Requestor (often same as subject, but admin can act on behalf)
-  "actor_type": "self" | "admin_proxy",
-  "actor_id": "cust_12345",
-  
-  // Request details
-  "request_id": "dsr_2026_05_28_001",
-  "request_type": "access" | "deletion" | "correction" | "consent_update" | "objection",
-  "request_channel": "app" | "api" | "email" | "phone" | "ops_form",
-  
-  // Lifecycle tracking
-  "sla_deadline_utc": "2026-06-04T03:00:00Z",  // 7 days for access per PDPL
-  "previous_step_audit_id": "aud_01HX8J...",   // chain DSR events together
-  
-  // Context
-  "purposes_affected": ["marketing", "analytics"],  // for consent_withdrawn
-  "fields_exported": ["name", "phone", "address"],  // for access_export
-  "records_count": 1247,                            // for export delivery
-  
-  // Compliance evidence
-  "legal_basis": "user_request_PDPL_article_17",
-  "legal_hold_reason": null,  // chỉ populated cho legal_hold_applied
-  
-  "occurred_at_utc": "2026-05-28T03:00:00Z",
-  "ip": "203.0.113.45",
-  "trace_id": "..."
+ "audit_id": "aud_01HX8K...",
+ "action": "dsr.access_export_started",
+ "category": "compliance",
+ "severity": "notice",
+ 
+ // Subject (whose data)
+ "subject_type": "customer" | "agent" | "partner",
+ "subject_id": "cust_12345",
+ "subject_country": "VN", // ← determines applicable law
+ 
+ // Requestor (often same as subject, but admin can act on behalf)
+ "actor_type": "self" | "admin_proxy",
+ "actor_id": "cust_12345",
+ 
+ // Request details
+ "request_id": "dsr_2026_05_28_001",
+ "request_type": "access" | "deletion" | "correction" | "consent_update" | "objection",
+ "request_channel": "app" | "api" | "email" | "phone" | "ops_form",
+ 
+ // Lifecycle tracking
+ "sla_deadline_utc": "2026-06-04T03:00:00Z", // 7 days for access per PDPL
+ "previous_step_audit_id": "aud_01HX8J...", // chain DSR events together
+ 
+ // Context
+ "purposes_affected": ["marketing", "analytics"], // for consent_withdrawn
+ "fields_exported": ["name", "phone", "address"], // for access_export
+ "records_count": 1247, // for export delivery
+ 
+ // Compliance evidence
+ "legal_basis": "user_request_PDPL_article_17",
+ "legal_hold_reason": null, // chỉ populated cho legal_hold_applied
+ 
+ "occurred_at_utc": "2026-05-28T03:00:00Z",
+ "ip": "203.0.113.45",
+ "trace_id": "..."
 }
 ```
 
@@ -622,12 +622,12 @@ Khi có legal hold (dispute mở, fraud investigation, court order...), DSR dele
 
 ```json
 {
-  "action": "dsr.legal_hold_applied",
-  "severity": "critical",
-  "legal_hold_reason": "dispute_DSP-2026-001-pending_resolution",
-  "subject_id": "cust_12345",
-  "actor_id": "ops_admin_01",
-  "estimated_release_date": "2026-08-15"  // when hold can be lifted
+ "action": "dsr.legal_hold_applied",
+ "severity": "critical",
+ "legal_hold_reason": "dispute_DSP-2026-001-pending_resolution",
+ "subject_id": "cust_12345",
+ "actor_id": "ops_admin_01",
+ "estimated_release_date": "2026-08-15" // when hold can be lifted
 }
 ```
 
@@ -688,7 +688,7 @@ Per NĐ 356, các categories sau cần extra audit attention:
 - **Chế tài NĐ 310/2025**: tới 200M VND cho vi phạm hóa đơn
 - All `financial.*` audit entries retained **10 years** (override 7-year default)
 
-### Multi-jurisdiction posture (v4.0)
+### Multi-jurisdiction posture 
 
 Khi expand sang country khác, audit log structure giữ nguyên nhưng compliance mapping cần extend:
 
